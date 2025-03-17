@@ -54,7 +54,7 @@ spec:
               --url="$JDBC_URL" \
               --username="$LIQUIBASE_DB_USERNAME" \
               --password="$LIQUIBASE_DB_PASSWORD" \
-              --changeLogFile=db.changelog-master.yaml \
+              --changeLogFile=db.changelog-master.xml \
               update
         volumeMounts:
           - name: changelog-volume
