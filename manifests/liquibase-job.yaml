@@ -15,7 +15,7 @@ spec:
           - "-c"
           - |
             # Clone your Liquibase Git repo – use your repository URL
-            https://github.com/AdityaOnCloud14/eks-liquibase-demo.git /liquibase-changelogs
+            git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git /liquibase-changelogs
         volumeMounts:
           - name: changelog-volume
             mountPath: /liquibase-changelogs
