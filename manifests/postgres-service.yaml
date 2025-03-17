@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: liquibase-demo
+spec:
+  selector:
+    app: postgres
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
