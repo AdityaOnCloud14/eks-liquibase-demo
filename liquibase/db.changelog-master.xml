@@ -1,37 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-  <!-- ChangeSet 001: Create Products Table -->
-  <changeSet id="001_create_products_table" author="dev_team">
-    <createTable tableName="products">
-      <column name="id" type="serial">
-        <constraints primaryKey="true" nullable="false"/>
-      </column>
-      <column name="name" type="varchar(100)"/>
-    </createTable>
-    <rollback>
-      <dropTable tableName="products"/>
-    </rollback>
-  </changeSet>
-
-  <!-- ChangeSet 002: Insert Initial Data -->
-  <changeSet id="002_insert_initial_data" author="dev_team">
-    <insert tableName="products">
-      <column name="name" value="Gadget"/>
-    </insert>
-    <insert tableName="products">
-      <column name="name" value="Widget"/>
-    </insert>
-    <rollback>
-      <delete tableName="products">
-        <where>name IN ('Gadget','Widget')</where>
-      </delete>
-    </rollback>
-  </changeSet>
+    <include file="schema-changes.sql" relativeToChangelogFile="true" />
+    <include file="data-inserts.sql"   relativeToChangelogFile="true" />
+    <include file="tag-changes.sql"    relativeToChangelogFile="true" />
 
 </databaseChangeLog>
-
