@@ -1,6 +1,8 @@
 #add logic for cleanup the update job pods or check if there were any existing pods, will have to delete those 
 #kubectl delete liquibase-update-job -n liquibase-demo
-
+#
+#for lint checks follow the following document 
+# https://docs.sqlfluff.com/en/stable/reference/rules.html#bundle-layout
 #also add a detailed readme.md file 
 
 name: Liquibase Migration Pipeline
