@@ -6,7 +6,8 @@
 #also add a detailed readme.md file 
 
 #instead of having seprate job to updatE DB can we have just the liquibase commands run after the init conatiners clone the repo and mount it with the volume 
-#
+#can we have a seperte tab where we can mention a specific command other than just normal update and rollback and the pipeline should run it and do the necessary changes.
+
 
 name: Liquibase Migration Pipeline
 
