@@ -1,4 +1,5 @@
 --liquibase formatted sql
+--sqlfluff: disable=layout.long_lines
 
 --changeset dev_team:001
 CREATE TABLE customers (
@@ -15,9 +16,12 @@ CREATE TABLE orders (
     order_date DATE DEFAULT CURRENT_DATE,
     status VARCHAR(20),
     total_amount DECIMAL(10, 2),
-    CONSTRAINT fk_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+    CONSTRAINT fk_customer FOREIGN KEY (customer_id)
+        REFERENCES customers (customer_id)
 );
 
 --rollback dev_team:001
 DROP TABLE orders;
 DROP TABLE customers;
+
+--sqlfluff: enable=layout.long_lines
