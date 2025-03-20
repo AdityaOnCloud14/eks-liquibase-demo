@@ -84,3 +84,8 @@ jobs:
           POD=$(kubectl get pods -n liquibase-demo -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
           echo "Liquibase Job Logs:"
           kubectl logs $POD -n liquibase-demo
+
+      # 9. Cleanup: Delete the Liquibase Job from the namespace
+      - name: Cleanup Liquibase Job
+        run: |
+          kubectl delete job liquibase-job -n liquibase-demo
