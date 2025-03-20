@@ -1,6 +1,6 @@
---liquibase formatted sql
+-- liquibase formatted sql
 
---changeset dev_team:002
+-- changeset dev_team:002
 INSERT INTO customers (first_name, last_name, email)
 VALUES
 ('Alice', 'Smith', 'alice.smith@example.com'),
@@ -22,6 +22,6 @@ VALUES
 (2, '2025-03-10', 'Processing', 99.95),
 (5, '2025-03-12', 'Delivered', 499.99);
 
---rollback dev_team:002
+-- rollback dev_team:002
 DELETE FROM orders;
 DELETE FROM customers;
