@@ -22,11 +22,17 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v2
 
-      # 2. Lint SQL files using SQLint (alternative to SQLFluff)
-      - name: Lint SQL with SQLint
+      # 2. Lint SQL files using SQLint 
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install and Lint SQL with SQLint
         run: |
           pip install sqlint
           sqlint liquibase/
+
 
       # 3. Configure AWS Credentials (set these as GitHub Secrets)
       - name: Configure AWS Credentials
