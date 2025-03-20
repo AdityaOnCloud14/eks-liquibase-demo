@@ -1,14 +1,13 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: liquibase-init-job
+  name: liquibase-job
   namespace: liquibase-demo
 spec:
   template:
     spec:
       restartPolicy: Never
-
-      # Init container: clones your repo
+      # Init container: Clone the Liquibase repository
       initContainers:
       - name: clone-liquibase-scripts
         image: alpine/git:latest
@@ -16,12 +15,11 @@ spec:
         args:
           - "-c"
           - |
-            git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git /liquibase-changelogs
+            git clone https://github.com/<YOUR_ORG>/eks-liquibase-demo.git /liquibase-changelogs
         volumeMounts:
           - name: changelog-volume
             mountPath: /liquibase-changelogs
-
-      # Main container: runs Liquibase
+      # Main container: Run the Liquibase command
       containers:
       - name: liquibase
         image: liquibase/liquibase:latest
@@ -51,22 +49,12 @@ spec:
           - "-c"
           - |
             JDBC_URL="jdbc:postgresql://${LIQUIBASE_DB_HOST}:5432/${LIQUIBASE_DB_NAME}"
-            echo "Running Liquibase update against $JDBC_URL"
-
-            # Move into the liquibase/ directory where the .sql and .xml files reside
+            echo "Running Liquibase command against $JDBC_URL"
             cd /liquibase-changelogs/liquibase
-
-            # Run Liquibase referencing the master XML
-            liquibase \
-              --url="$JDBC_URL" \
-              --username="$LIQUIBASE_DB_USERNAME" \
-              --password="$LIQUIBASE_DB_PASSWORD" \
-              --changeLogFile=db.changelog-master.xml \
-              update
+            liquibase --url="$JDBC_URL" --username="$LIQUIBASE_DB_USERNAME" --password="$LIQUIBASE_DB_PASSWORD" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
         volumeMounts:
           - name: changelog-volume
             mountPath: /liquibase-changelogs
-
       volumes:
       - name: changelog-volume
         emptyDir: {}
