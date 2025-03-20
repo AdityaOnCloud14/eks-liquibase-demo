@@ -1,7 +1,7 @@
---liquibase formatted sql
---sqlfluff: disable=layout.long_lines
+-- liquibase formatted sql
+-- sqlfluff: disable=layout.long_lines
 
---changeset dev_team:001
+-- changeset dev_team:001
 CREATE TABLE customers (
     customer_id SERIAL PRIMARY KEY,
     first_name VARCHAR(50),
@@ -20,8 +20,8 @@ CREATE TABLE orders (
         REFERENCES customers (customer_id)
 );
 
---rollback dev_team:001
+-- rollback dev_team:001
 DROP TABLE orders;
 DROP TABLE customers;
 
---sqlfluff: enable=layout.long_lines
+-- sqlfluff: enable=layout.long_lines
