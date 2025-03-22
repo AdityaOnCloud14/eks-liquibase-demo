@@ -1,5 +1,5 @@
 --liquibase formatted sql
--- changeset dev_team:001
+-- changeset dev_team:101
 CREATE TABLE customers (
     customer_id SERIAL PRIMARY KEY,
     first_name VARCHAR(50),
@@ -18,6 +18,6 @@ CREATE TABLE orders (
     REFERENCES customers (customer_id)
 );
 
--- rollback dev_team:001
+-- changeset dev_team:101
 DROP TABLE orders;
 DROP TABLE customers;
