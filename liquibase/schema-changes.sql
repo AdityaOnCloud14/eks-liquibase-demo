@@ -18,6 +18,6 @@ CREATE TABLE orders (
     REFERENCES customers (customer_id)
 );
 
--- changeset dev_team:101
+-- rollback dev_team:101
 DROP TABLE orders;
 DROP TABLE customers;
