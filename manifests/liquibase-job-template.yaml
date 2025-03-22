@@ -58,7 +58,7 @@ spec:
             cd /liquibase-changelogs/liquibase
             # Unset the LIQUIBASE_DB_* variables so Liquibase doesn't pick them up.
             unset LIQUIBASE_DB_HOST LIQUIBASE_DB_NAME LIQUIBASE_DB_USERNAME LIQUIBASE_DB_PASSWORD
-            liquibase --url="$JDBC_URL" --username="$USER" --password="$PASSWORD" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
+            liquibase --url="$JDBC_URL" --username="$USER" --password="$PASS" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
         volumeMounts:
           - name: changelog-volume
             mountPath: /liquibase-changelogs
