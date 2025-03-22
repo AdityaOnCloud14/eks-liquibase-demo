@@ -48,9 +48,16 @@ spec:
         args:
           - "-c"
           - |
-            JDBC_URL="jdbc:postgresql://${LIQUIBASE_DB_HOST}:5432/${LIQUIBASE_DB_NAME}"
+            # Capture secret values into local shell variables.
+            HOST="$LIQUIBASE_DB_HOST"
+            NAME="$LIQUIBASE_DB_NAME"
+            USER="$LIQUIBASE_DB_USERNAME"
+            PASS="$LIQUIBASE_DB_PASSWORD"
+            JDBC_URL="jdbc:postgresql://${HOST}:5432/${NAME}"
             echo "Running Liquibase command against $JDBC_URL"
             cd /liquibase-changelogs/liquibase
+            # Unset the LIQUIBASE_DB_* variables so Liquibase doesn't pick them up.
+            unset LIQUIBASE_DB_HOST LIQUIBASE_DB_NAME LIQUIBASE_DB_USERNAME LIQUIBASE_DB_PASSWORD
             liquibase --url="$JDBC_URL" --username="$LIQUIBASE_DB_USERNAME" --password="$LIQUIBASE_DB_PASSWORD" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
         volumeMounts:
           - name: changelog-volume
