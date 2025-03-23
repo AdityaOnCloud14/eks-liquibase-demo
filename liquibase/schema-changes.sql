@@ -1,4 +1,5 @@
 --liquibase formatted sql
+
 -- changeset dev_team:101
 CREATE TABLE customers (
     customer_id SERIAL PRIMARY KEY,
@@ -15,7 +16,7 @@ CREATE TABLE orders (
     status VARCHAR(20),
     total_amount DECIMAL(10, 2),
     CONSTRAINT fk_customer FOREIGN KEY (customer_id)
-    REFERENCES customers (customer_id)
+        REFERENCES customers (customer_id)
 );
 
 -- rollback dev_team:101

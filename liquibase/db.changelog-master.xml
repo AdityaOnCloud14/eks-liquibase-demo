@@ -3,9 +3,12 @@
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <include file="schema-changes.sql" relativeToChangelogFile="true" />
-    <include file="data-inserts.sql"   relativeToChangelogFile="true" />
+    <!-- First, create the tables -->
+    <include file="schema-changes.sql" relativeToChangelogFile="true"/>
+    
+    <!-- Then, insert the data -->
+    <include file="data-inserts.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
