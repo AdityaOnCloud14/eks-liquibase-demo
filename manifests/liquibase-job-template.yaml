@@ -62,17 +62,11 @@ spec:
           args:
             - "-c"
             - |
-              # Capture environment variables into local shell variables.
               HOST="$DB_HOST"
               NAME="$DB_NAME"
               USER="$DB_USER"
               PASS="$DB_PASS"
               JDBC_URL="jdbc:postgresql://${HOST}:5432/${NAME}"
               echo "Running Liquibase command against ${JDBC_URL}"
-              # Navigate to the liquibase folder (adjust if your repo structure is different)
               cd /workspace/liquibase
-              # Run Liquibase with the substituted command (the placeholder will be replaced by your pipeline)
               liquibase --url="$JDBC_URL" --username="$USER" --password="$PASS" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
-      volumes:
-        - name: changelog-volume
-          emptyDir: {}
