@@ -1,97 +1,51 @@
-name: Liquibase Migration Pipeline
+name: Liquibase Pipeline
 
 on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Liquibase operation: update, rollback, or custom'
+        description: "Liquibase operation to perform (update, rollbackCount 1, or custom)"
         required: true
-        default: update
-      rollbackCount:
-        description: 'Number of changesets to rollback (used if operation is rollback)'
+        default: "update"
+        type: choice
+        options:
+          - update
+          - "rollbackCount 1"
+          - custom
+      custom_command:
+        description: 'Custom Liquibase command to run (used if operation is "custom")'
         required: false
-      customCommand:
-        description: 'Custom Liquibase command (used if operation is custom)'
-        required: false
+        default: ""
 
 jobs:
-  liquibase:
+  run-liquibase:
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout the repository
-      - name: Checkout Repo
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      # 2. Lint SQL files using SQLfluff
-      - name: Lint SQL with SQLFluff
+      - name: Generate Liquibase Job manifest
+        shell: bash
         run: |
-          pip install sqlfluff==3.2.0  # or upgrade if you prefer
-          sqlfluff lint liquibase/ --dialect postgres
-
-      # 3. Configure AWS Credentials (set these as GitHub Secrets)
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      # 4. Update kubeconfig for EKS
-      - name: Update kubeconfig for EKS
-        run: aws eks update-kubeconfig --name my-lb-initcluster
-
-      # 5. Deploy DB Credentials & Postgres manifests
-      - name: Deploy DB Credentials & Postgres
-        run: |
-          kubectl apply -f manifests/db-credentials-secret.yaml -n liquibase-demo
-          kubectl apply -f manifests/postgres-deployment.yaml -n liquibase-demo
-          kubectl apply -f manifests/postgres-service.yaml -n liquibase-demo
-
-      # 6. Determine the Liquibase Command based on input
-      - name: Set Liquibase Command
-        id: set_command
-        run: |
-          if [ "${{ github.event.inputs.operation }}" = "update" ]; then
-            echo "command=update" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.inputs.operation }}" = "rollback" ]; then
-            if [ -z "${{ github.event.inputs.rollbackCount }}" ]; then
-              echo "command=rollback v1.0" >> $GITHUB_OUTPUT
-            else
-              echo "command=rollbackCount ${{ github.event.inputs.rollbackCount }}" >> $GITHUB_OUTPUT
-            fi
-          elif [ "${{ github.event.inputs.operation }}" = "custom" ]; then
-            if [ -z "${{ github.event.inputs.customCommand }}" ]; then
-              echo "command=update" >> $GITHUB_OUTPUT
-            else
-              echo "command=${{ github.event.inputs.customCommand }}" >> $GITHUB_OUTPUT
-            fi
+          set -e
+          OP="${{ inputs.operation }}"
+          if [ "$OP" = "update" ]; then
+            CMD="update"
+          elif [ "$OP" = "rollbackCount 1" ]; then
+            CMD="rollbackCount 1"
+          elif [ "$OP" = "custom" ]; then
+            CMD="${{ inputs.custom_command }}"
           else
-            echo "command=update" >> $GITHUB_OUTPUT
+            CMD="$OP"
           fi
 
-      # 7. Generate the Liquibase Job manifest by substituting the command placeholder
-      - name: Generate Liquibase Job Manifest
-        run: |
-          # Replace the placeholder with the chosen Liquibase command
-          sed "s|__LIQUIBASE_COMMAND__|${{ steps.set_command.outputs.command }}|g" \
-            manifests/liquibase-job-template.yaml > manifests/liquibase-job.yaml
+          # Replace placeholder in the job template with the actual Liquibase command
+          sed -e "s#__LIQUIBASE_COMMAND__#${CMD}#g" liquibase-job-template.yaml > liquibase-job.yaml
 
-          echo "Generated Manifest:"
-          cat manifests/liquibase-job.yaml
+      - name: Apply Liquibase Job
+        run: kubectl apply -f liquibase-job.yaml
 
-          - name: Deploy Liquibase Job
-          run: |
-          kubectl apply -f manifests/liquibase-job.yaml -n liquibase-demo
-          # Wait up to 300 seconds for the job to complete
-          kubectl wait --for=condition=complete job/liquibase-job -n liquibase-demo --timeout=300s
+      - name: Wait for Liquibase Job completion
+        run: kubectl wait --for=condition=complete job/liquibase-job --timeout=300s
 
-          # Show logs
-          POD=$(kubectl get pods -n liquibase-demo -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
-          echo "Liquibase Job Logs:"
-          kubectl logs $POD -n liquibase-demo
-
-
-      # 9. Cleanup: Delete the Liquibase Job from the namespace
-      - name: Cleanup Liquibase Job
-        run: |
-          kubectl delete job liquibase-job -n liquibase-demo
+      - name: Fetch Liquibase Job logs
+        run: kubectl logs job/liquibase-job
