@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
--- changeset dev_team:101
+-- changeset dbteam:001-create-customers
 CREATE TABLE customers (
     customer_id SERIAL PRIMARY KEY,
     first_name VARCHAR(50),
@@ -8,7 +8,9 @@ CREATE TABLE customers (
     email VARCHAR(100),
     created_at TIMESTAMP DEFAULT NOW()
 );
+-- rollback DROP TABLE customers;
 
+-- changeset dbteam:002-create-orders
 CREATE TABLE orders (
     order_id SERIAL PRIMARY KEY,
     customer_id INT NOT NULL,
@@ -18,7 +20,4 @@ CREATE TABLE orders (
     CONSTRAINT fk_customer FOREIGN KEY (customer_id)
     REFERENCES customers (customer_id)
 );
-
--- rollback dev_team:101
-DROP TABLE orders;
-DROP TABLE customers;
+-- rollback DROP TABLE orders;

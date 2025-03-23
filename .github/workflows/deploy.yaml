@@ -72,18 +72,24 @@ jobs:
       # 7. Generate the Liquibase Job manifest by substituting the command placeholder
       - name: Generate Liquibase Job Manifest
         run: |
-          sed "s|__LIQUIBASE_COMMAND__|${{ steps.set_command.outputs.command }}|g" manifests/liquibase-job-template.yaml > manifests/liquibase-job.yaml
+          # Replace the placeholder with the chosen Liquibase command
+          sed "s|__LIQUIBASE_COMMAND__|${{ steps.set_command.outputs.command }}|g" \
+            manifests/liquibase-job-template.yaml > manifests/liquibase-job.yaml
+
           echo "Generated Manifest:"
           cat manifests/liquibase-job.yaml
 
-      # 8. Deploy the Liquibase Job and wait for it to complete
-      - name: Deploy Liquibase Job
-        run: |
+          - name: Deploy Liquibase Job
+          run: |
           kubectl apply -f manifests/liquibase-job.yaml -n liquibase-demo
+          # Wait up to 300 seconds for the job to complete
           kubectl wait --for=condition=complete job/liquibase-job -n liquibase-demo --timeout=300s
+
+          # Show logs
           POD=$(kubectl get pods -n liquibase-demo -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
           echo "Liquibase Job Logs:"
           kubectl logs $POD -n liquibase-demo
+
 
       # 9. Cleanup: Delete the Liquibase Job from the namespace
       - name: Cleanup Liquibase Job

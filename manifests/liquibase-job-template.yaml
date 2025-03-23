@@ -3,65 +3,62 @@ kind: Job
 metadata:
   name: liquibase-job
   namespace: liquibase-demo
+  labels:
+    app: liquibase-migrator
 spec:
+  # Fail fast if the job fails; do not retry
+  backoffLimit: 0
+  # Clean up finished job resources after 5 minutes
+  ttlSecondsAfterFinished: 300
   template:
     spec:
-      restartPolicy: Never
-      # Init container: Clone the Liquibase repository
-      initContainers:
-      - name: clone-liquibase-scripts
-        image: alpine/git:latest
-        command: ["/bin/sh"]
-        args:
-          - "-c"
-          - |
-            git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git /liquibase-changelogs
-        volumeMounts:
-          - name: changelog-volume
-            mountPath: /liquibase-changelogs
-      # Main container: Run the Liquibase command
-      containers:
-      - name: liquibase
-        image: liquibase/liquibase:latest
-        env:
-          - name: LIQUIBASE_DB_HOST
-            valueFrom:
-              secretKeyRef:
-                name: db-credentials
-                key: host
-          - name: LIQUIBASE_DB_NAME
-            valueFrom:
-              secretKeyRef:
-                name: db-credentials
-                key: dbname
-          - name: LIQUIBASE_DB_USERNAME
-            valueFrom:
-              secretKeyRef:
-                name: db-credentials
-                key: username
-          - name: LIQUIBASE_DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: db-credentials
-                key: password
-        command: ["/bin/sh"]
-        args:
-          - "-c"
-          - |
-            # Capture secret values into local shell variables.
-            HOST="$LIQUIBASE_DB_HOST"
-            NAME="$LIQUIBASE_DB_NAME"
-            USER="$LIQUIBASE_DB_USERNAME"
-            PASS="$LIQUIBASE_DB_PASSWORD"
-            JDBC_URL="jdbc:postgresql://${HOST}:5432/${NAME}"
-            echo "Running Liquibase command against $JDBC_URL"
-            cd /liquibase-changelogs/liquibase
-            # Unset the LIQUIBASE_DB_* variables so Liquibase doesn't pick them up.
-            unset LIQUIBASE_DB_HOST LIQUIBASE_DB_NAME LIQUIBASE_DB_USERNAME LIQUIBASE_DB_PASSWORD
-            liquibase --url="$JDBC_URL" --username="$USER" --password="$PASS" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
-        volumeMounts:
-          - name: changelog-volume
-            mountPath: /liquibase-changelogs
+      # If you prefer, use OnFailure or Never. OnFailure allows container restarts if the container fails.
+      restartPolicy: OnFailure
+
       volumes:
-      - name: changelog-volume
-        emptyDir: {}
+        - name: changelog-volume
+          emptyDir: {}  # ephemeral volume for both init & main containers
+
+      # 1) Init Container: clone the Liquibase repo into /workspace
+      initContainers:
+        - name: git-clone
+          image: alpine/git:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - clone
+            - --depth=1
+            - "https://github.com/AdityaOnCloud14/eks-liquibase-demo.git"
+            - "/workspace"
+          volumeMounts:
+            - name: changelog-volume
+              mountPath: /workspace
+          # If the repo is private, add SSH keys or tokens here.
+
+      # 2) Main Container: runs Liquibase
+      containers:
+        - name: liquibase
+          image: liquibase/liquibase:latest
+          imagePullPolicy: IfNotPresent
+
+          # Pull DB credentials from your db-credentials secret
+          envFrom:
+            - secretRef:
+                name: manifests/db-credentials-secret.yaml  # Contains DB_HOST, DB_NAME, DB_USER, DB_PASS
+          env:
+            # (Optional) Set the Liquibase home or other environment variables if needed
+            - name: LIQUIBASE_HOME
+              value: /workspace
+
+          volumeMounts:
+            - name: changelog-volume
+              mountPath: /workspace
+
+          workingDir: /workspace
+          command: ["liquibase"]
+          # We'll substitute __LIQUIBASE_COMMAND__ at runtime (update, rollbackCount 1, etc.)
+          args:
+            - "--url=jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}"
+            - "--username=${DB_USER}"
+            - "--password=${DB_PASS}"
+            - "--changeLogFile=db.changelog-master.xml"
+            - "__LIQUIBASE_COMMAND__"
