@@ -22,7 +22,7 @@ spec:
             - clone
             - --depth=1
             - --single-branch
-            - "https://github.com/<YOUR_ORG>/<YOUR_REPO>.git"
+            - "https://github.com/AdityaOnCloud14/eks-liquibase-demo.git"
             - "/workspace"
           volumeMounts:
             - name: changelog-volume
