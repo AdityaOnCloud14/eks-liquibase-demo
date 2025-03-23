@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
--- changeset dev_team:102
+-- changeset dbteam:003-insert-customers
 INSERT INTO customers (first_name, last_name, email)
 VALUES
 ('Alice', 'Smith', 'alice.smith@example.com'),
@@ -8,7 +8,9 @@ VALUES
 ('Charlie', 'Brown', 'charlie.brown@example.com'),
 ('Diana', 'Prince', 'diana.prince@example.com'),
 ('Ethan', 'Hunt', 'ethan.hunt@example.com');
+-- rollback DELETE FROM customers WHERE email IN ('alice@example.com','bob@example.com');
 
+-- changeset dbteam:004-insert-orders
 INSERT INTO orders (customer_id, order_date, status, total_amount)
 VALUES
 (1, '2025-01-10', 'Processing', 120.50),
@@ -22,6 +24,4 @@ VALUES
 (2, '2025-03-10', 'Processing', 99.95),
 (5, '2025-03-12', 'Delivered', 499.99);
 
--- rollback dev_team:102
-DELETE FROM orders;
-DELETE FROM customers;
+-- rollback DELETE FROM orders WHERE product IN ('Widget','Gadget');
