@@ -8,14 +8,14 @@ on:
         required: true
         default: update
       rollbackCount:
-        description: 'Number of changesets to rollback (used if operation is rollback)'
+        description: 'Number of changesets to rollback (e.g., 4 for full rollback)'
         required: false
 
 jobs:
   liquibase:
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout the repository
+      # 1. Checkout repository
       - name: Checkout Repo
         uses: actions/checkout@v2
 
@@ -25,7 +25,7 @@ jobs:
           pip install sqlfluff==3.2.0
           sqlfluff lint liquibase/ --dialect postgres
 
-      # 3. Configure AWS Credentials (set these as GitHub Secrets)
+      # 3. Configure AWS Credentials (ensure these are set as GitHub Secrets)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -54,6 +54,7 @@ jobs:
             if [ -z "${{ github.event.inputs.rollbackCount }}" ]; then
               echo "command=rollback v1.0" >> $GITHUB_OUTPUT
             else
+              # Ensure there's a space between 'rollbackCount' and the number.
               echo "command=rollbackCount ${{ github.event.inputs.rollbackCount }}" >> $GITHUB_OUTPUT
             fi
           else
@@ -67,7 +68,7 @@ jobs:
           echo "Generated Manifest:"
           cat manifests/liquibase-job.yaml
 
-      # 8. Deploy the Liquibase Job and wait for it to complete
+      # 8. Deploy the Liquibase Job and wait for completion
       - name: Deploy Liquibase Job
         run: |
           kubectl apply -f manifests/liquibase-job.yaml -n liquibase-demo
