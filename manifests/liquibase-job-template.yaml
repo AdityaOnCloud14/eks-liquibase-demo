@@ -6,20 +6,14 @@ metadata:
   labels:
     app: liquibase-migrator
 spec:
-  # Fail fast if the job fails; do not retry
-  backoffLimit: 0
-  # Clean up finished job resources after 5 minutes
-  ttlSecondsAfterFinished: 300
+  backoffLimit: 0              # Fail fast if the job fails; no retries
+  ttlSecondsAfterFinished: 300 # Auto-cleanup job and pods 5 minutes after completion
   template:
     spec:
-      # If you prefer, use OnFailure or Never. OnFailure allows container restarts if the container fails.
       restartPolicy: OnFailure
-
       volumes:
         - name: changelog-volume
-          emptyDir: {}  # ephemeral volume for both init & main containers
-
-      # 1) Init Container: clone the Liquibase repo into /workspace
+          emptyDir: {}         # Ephemeral volume to share files between containers
       initContainers:
         - name: git-clone
           image: alpine/git:latest
@@ -27,35 +21,43 @@ spec:
           args:
             - clone
             - --depth=1
+            - --single-branch
             - "https://github.com/AdityaOnCloud14/eks-liquibase-demo.git"
             - "/workspace"
           volumeMounts:
             - name: changelog-volume
               mountPath: /workspace
-          # If the repo is private, add SSH keys or tokens here.
-
-      # 2) Main Container: runs Liquibase
       containers:
         - name: liquibase
           image: liquibase/liquibase:latest
           imagePullPolicy: IfNotPresent
-
-          # Pull DB credentials from your db-credentials secret
-          envFrom:
-            - secretRef:
-                name: manifests/db-credentials-secret.yaml  # Contains DB_HOST, DB_NAME, DB_USER, DB_PASS
+          # Explicit environment variable mapping from the secret
           env:
-            # (Optional) Set the Liquibase home or other environment variables if needed
-            - name: LIQUIBASE_HOME
-              value: /workspace
-
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: host
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: dbname
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: username
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
           volumeMounts:
             - name: changelog-volume
               mountPath: /workspace
-
           workingDir: /workspace
           command: ["liquibase"]
-          # We'll substitute __LIQUIBASE_COMMAND__ at runtime (update, rollbackCount 1, etc.)
           args:
             - "--url=jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}"
             - "--username=${DB_USER}"
