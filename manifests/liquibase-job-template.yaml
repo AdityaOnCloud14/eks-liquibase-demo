@@ -22,6 +22,8 @@ spec:
             - clone
             - --depth=1
             - --single-branch
+            - -b
+            - main
             - "https://github.com/AdityaOnCloud14/eks-liquibase-demo.git"
             - "/workspace"
           volumeMounts:
@@ -60,7 +62,7 @@ spec:
           args:
             - "-c"
             - |
-              # Capture environment variables into local shell variables
+              # Capture environment variables into local shell variables.
               HOST="$DB_HOST"
               NAME="$DB_NAME"
               USER="$DB_USER"
@@ -71,3 +73,6 @@ spec:
               cd /workspace/liquibase
               # Run Liquibase with the substituted command (the placeholder will be replaced by your pipeline)
               liquibase --url="$JDBC_URL" --username="$USER" --password="$PASS" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
+      volumes:
+        - name: changelog-volume
+          emptyDir: {}
