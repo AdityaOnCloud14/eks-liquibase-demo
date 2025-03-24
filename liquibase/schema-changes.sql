@@ -21,3 +21,14 @@ CREATE TABLE orders (
     REFERENCES customers (customer_id)
 );
 -- rollback DROP TABLE orders;
+
+-- changeset dbteam:003-create-info
+CREATE TABLE info (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INT NOT NULL,
+    order_date DATE DEFAULT CURRENT_DATE,
+    status VARCHAR(20),
+    total_amount DECIMAL(10, 2),
+    CONSTRAINT fk_customer FOREIGN KEY (customer_id)
+    REFERENCES customers (customer_id)
+);
