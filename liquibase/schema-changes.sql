@@ -33,4 +33,3 @@ CREATE TABLE info (
     REFERENCES customers (customer_id)
 );
 -- rollback DROP TABLE orders;
-
