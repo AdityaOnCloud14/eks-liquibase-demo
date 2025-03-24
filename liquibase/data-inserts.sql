@@ -23,7 +23,7 @@ VALUES
 (3, '2025-03-05', 'Shipped', 150.00),
 (2, '2025-03-10', 'Processing', 99.95),
 (5, '2025-03-12', 'Delivered', 499.99);
--- rollback DELETE FROM orders WHERE product IN ('Widget','Gadget');
+-- rollback DELETE FROM orders 
 
 -- changeset dbteam:005-insert-info
 INSERT INTO info (customer_id, order_date, status, total_amount)
@@ -39,4 +39,4 @@ VALUES
 (2, '2025-03-10', 'Processing', 99.95),
 (5, '2025-03-12', 'Delivered', 499.99);
 
--- rollback DELETE FROM info WHERE product IN ('Widget','Gadget');
+-- rollback DELETE FROM info 
