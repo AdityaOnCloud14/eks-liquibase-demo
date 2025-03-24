@@ -32,3 +32,5 @@ CREATE TABLE info (
     CONSTRAINT fk_customer FOREIGN KEY (customer_id)
     REFERENCES customers (customer_id)
 );
+-- rollback DROP TABLE orders;
+
