@@ -6,7 +6,7 @@ metadata:
   labels:
     app: liquibase-migrator
 spec:
-  backoffLimit: 0              
+  backoffLimit: 5              
   #ttlSecondsAfterFinished: 300 
   template:
     spec:
@@ -35,13 +35,14 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: DB_HOST
-              value: "${DB_HOST}"
+            value: "__DB_HOST__"
             - name: DB_NAME
-              value: "${DB_NAME}"
+            value: "__DB_NAME__"
             - name: DB_USER
-              value: "${DB_USER}"
+            value: "__DB_USER__"
             - name: DB_PASS
-              value: "${DB_PASS}"
+            value: "__DB_PASS__"
+            
           volumeMounts:
             - name: changelog-volume
               mountPath: /workspace
