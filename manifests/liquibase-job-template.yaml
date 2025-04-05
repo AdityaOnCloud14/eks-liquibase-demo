@@ -34,14 +34,14 @@ spec:
           image: liquibase/liquibase:latest
           imagePullPolicy: IfNotPresent
           env:
-            - name: DB_HOST
-            value: "__DB_HOST__"
-            - name: DB_NAME
-            value: "__DB_NAME__"
-            - name: DB_USER
-            value: "__DB_USER__"
-            - name: DB_PASS
-            value: "__DB_PASS__"
+              - name: DB_HOST
+              value: "__DB_HOST__"
+              - name: DB_NAME
+              value: "__DB_NAME__"
+              - name: DB_USER
+              value: "__DB_USER__"
+              - name: DB_PASS
+              value: "__DB_PASS__"
             
           volumeMounts:
             - name: changelog-volume
