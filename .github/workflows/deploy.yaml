@@ -29,6 +29,10 @@ on:
         required: true
         default: demo_db
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -64,10 +68,12 @@ jobs:
 
       # 4. Configure AWS Credentials using the role ARN from step 3
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ steps.set_aws_role.outputs.aws_role }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV }}
           aws-region: us-east-1
+          role-session-name: GitHubActionsSession
+    
 
       # 5. Retrieve DB Secrets from AWS SSM
       - name: Retrieve DB Secrets from SSM
