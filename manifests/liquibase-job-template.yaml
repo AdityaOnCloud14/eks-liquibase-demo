@@ -13,7 +13,7 @@ spec:
       restartPolicy: OnFailure
       volumes:
         - name: changelog-volume
-          emptyDir: {}         
+          emptyDir: {}
       initContainers:
         - name: git-clone
           image: alpine/git:latest
