@@ -25,7 +25,7 @@ on:
         required: false
         default: "1"
       target_db:
-        description: 'Name of the target database (choose from the list below)'
+        description: 'Database name where changes should be deployed'
         required: true
         default: demo_db
 
@@ -44,14 +44,32 @@ jobs:
           pip install sqlfluff==3.2.0
           sqlfluff lint liquibase/ --dialect postgres
 
-      # 3. Configure AWS Credentials (stored in GitHub Secrets)
+      # 3. Set AWS Role ARN based on the selected environment
+      - name: Set AWS Role ARN
+        id: set_aws_role
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+            echo "::set-output name=aws_role::$AWS_ROLE_ARN_DEV"
+          elif [ "${{ github.event.inputs.environment }}" = "test" ]; then
+            echo "::set-output name=aws_role::$AWS_ROLE_ARN_TEST"
+          elif [ "${{ github.event.inputs.environment }}" = "prod" ]; then
+            echo "::set-output name=aws_role::$AWS_ROLE_ARN_PROD"
+          else
+            echo "::set-output name=aws_role::$AWS_ROLE_ARN_DEV"
+          fi
+        env:
+          AWS_ROLE_ARN_DEV: ${{ secrets.AWS_ROLE_ARN_DEV }}
+          AWS_ROLE_ARN_TEST: ${{ secrets.AWS_ROLE_ARN_TEST }}
+          AWS_ROLE_ARN_PROD: ${{ secrets.AWS_ROLE_ARN_PROD }}
+
+      # 4. Configure AWS Credentials using the role ARN from step 3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{ secrets["AWS_ROLE_ARN_" + github.event.inputs.environment | toUpperCase()] }}
+          role-to-assume: ${{ steps.set_aws_role.outputs.aws_role }}
           aws-region: us-east-1
 
-      # 4. Retrieve DB Secrets from AWS SSM
+      # 5. Retrieve DB Secrets from AWS SSM
       - name: Retrieve DB Secrets from SSM
         id: get_secrets
         run: |
@@ -59,21 +77,21 @@ jobs:
           DB_HOST=$(aws ssm get-parameter --name "/${ENV}/db/DB_HOST" --with-decryption --query 'Parameter.Value' --output text)
           DB_USER=$(aws ssm get-parameter --name "/${ENV}/db/DB_USER" --with-decryption --query 'Parameter.Value' --output text)
           DB_PASS=$(aws ssm get-parameter --name "/${ENV}/db/DB_PASS" --with-decryption --query 'Parameter.Value' --output text)
-          # Use the user-specified target_db for DB_NAME
+          # Use the user-specified target_db for DB_NAME.
           DB_NAME="${{ github.event.inputs.target_db }}"
           echo "::set-output name=db_host::$DB_HOST"
           echo "::set-output name=db_user::$DB_USER"
           echo "::set-output name=db_pass::$DB_PASS"
           echo "::set-output name=db_name::$DB_NAME"
 
-      # 5. List Available Databases (so user can see which DBs exist)
+      # 6. List Available Databases (optional, for user verification)
       - name: List Databases
         run: |
           sudo apt-get update && sudo apt-get install -y postgresql-client
           echo "Listing databases on host: ${{ steps.get_secrets.outputs.db_host }}"
           psql -h "${{ steps.get_secrets.outputs.db_host }}" -U "${{ steps.get_secrets.outputs.db_user }}" -c "\l"
 
-      # 6. Determine Liquibase Command based on input
+      # 7. Determine the Liquibase Command based on input
       - name: Set Liquibase Command
         id: set_command
         run: |
@@ -85,17 +103,15 @@ jobs:
             echo "command=update" >> $GITHUB_OUTPUT
           fi
 
-      # 7. Generate Liquibase Job Manifest by substituting placeholders
+      # 8. Generate the Liquibase Job Manifest by substituting placeholders
       - name: Generate Liquibase Job Manifest
         run: |
-          # Replace the placeholder __LIQUIBASE_COMMAND__ with the actual command (update or rollbackCount N)
           sed "s|__LIQUIBASE_COMMAND__|${{ steps.set_command.outputs.command }}|g" manifests/liquibase-job-template.yaml > manifests/liquibase-job.yaml
-          # Replace __TARGET_DB__ with the target database name
           sed -i "s|__TARGET_DB__|${{ steps.get_secrets.outputs.db_name }}|g" manifests/liquibase-job.yaml
           echo "Generated Liquibase Job Manifest:"
           cat manifests/liquibase-job.yaml
 
-      # 8. Deploy Liquibase Job and wait for it to complete
+      # 9. Deploy the Liquibase Job and wait for it to complete
       - name: Deploy Liquibase Job
         run: |
           kubectl apply -f manifests/liquibase-job.yaml -n liquibase-demo
@@ -104,6 +120,6 @@ jobs:
           echo "Liquibase Job Logs:"
           kubectl logs $POD -n liquibase-demo
 
-      # 9. Cleanup Liquibase Job
+      # 10. Cleanup Liquibase Job
       - name: Cleanup Liquibase Job
         run: kubectl delete job liquibase-job -n liquibase-demo
