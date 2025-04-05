@@ -74,10 +74,6 @@ jobs:
           aws-region: us-east-1
           role-session-name: GitHubActionsSession
 
-      - name: Configure kubectl with EKS context
-        run: |
-          aws eks update-kubeconfig --region us-east-1 --name my-lb-initcluster
-
       # 5. Retrieve DB Secrets from AWS SSM
       - name: Retrieve DB Secrets from SSM
         id: get_secrets
@@ -104,6 +100,11 @@ jobs:
         #env:
           #DB_PASS: ${{ steps.get_secrets.outputs.db_pass }}
 
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig \
+          --region us-east-1 \
+          --name my-lb-initcluster
 
       # 7. Determine the Liquibase Command based on input
       - name: Set Liquibase Command
