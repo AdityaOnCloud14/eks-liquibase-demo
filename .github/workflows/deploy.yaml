@@ -91,11 +91,16 @@ jobs:
           echo "::set-output name=db_name::$DB_NAME"
 
       # 6. List Available Databases (optional, for user verification)
+      # 6. List Databases
       - name: List Databases
         run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client
-          echo "Listing databases on host: ${{ steps.get_secrets.outputs.db_host }}"
+          echo "$DB_PASS" > ~/.pgpass
+          chmod 600 ~/.pgpass
+          echo "${{ steps.get_secrets.outputs.db_host }}:5432:*:${{ steps.get_secrets.outputs.db_user }}:${{ steps.get_secrets.outputs.db_pass }}" > ~/.pgpass
           psql -h "${{ steps.get_secrets.outputs.db_host }}" -U "${{ steps.get_secrets.outputs.db_user }}" -c "\l"
+        env:
+          DB_PASS: ${{ steps.get_secrets.outputs.db_pass }}
+
 
       # 7. Determine the Liquibase Command based on input
       - name: Set Liquibase Command
