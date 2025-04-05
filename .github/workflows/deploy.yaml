@@ -82,12 +82,11 @@ jobs:
           DB_HOST=$(aws ssm get-parameter --name "/${ENV}/db/DB_HOST" --with-decryption --query 'Parameter.Value' --output text)
           DB_USER=$(aws ssm get-parameter --name "/${ENV}/db/DB_USER" --with-decryption --query 'Parameter.Value' --output text)
           DB_PASS=$(aws ssm get-parameter --name "/${ENV}/db/DB_PASS" --with-decryption --query 'Parameter.Value' --output text)
-          # Use the user-specified target_db for DB_NAME.
           DB_NAME="${{ github.event.inputs.target_db }}"
           echo "::set-output name=db_host::$DB_HOST"
           echo "::set-output name=db_user::$DB_USER"
-          echo "::set-output name=db_pass::$DB_PASS"
           echo "::set-output name=db_name::$DB_NAME"
+
 
       # 6. List Available Databases (optional, for user verification)
       # 6. List Databases
@@ -121,10 +120,15 @@ jobs:
       # 8. Generate the Liquibase Job Manifest by substituting placeholders
       - name: Generate Liquibase Job Manifest
         run: |
-          sed "s|__LIQUIBASE_COMMAND__|${{ steps.set_command.outputs.command }}|g" manifests/liquibase-job-template.yaml > manifests/liquibase-job.yaml
-          sed -i "s|__TARGET_DB__|${{ steps.get_secrets.outputs.db_name }}|g" manifests/liquibase-job.yaml
+          cp manifests/liquibase-job-template.yaml manifests/liquibase-job.yaml
+          sed -i "s|__DB_HOST__|${{ steps.get_secrets.outputs.db_host }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__DB_NAME__|${{ steps.get_secrets.outputs.db_name }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__DB_USER__|${{ steps.get_secrets.outputs.db_user }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__DB_PASS__|${{ steps.get_secrets.outputs.db_pass }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__LIQUIBASE_COMMAND__|${{ steps.set_command.outputs.command }}|g" manifests/liquibase-job.yaml
           echo "Generated Liquibase Job Manifest:"
           cat manifests/liquibase-job.yaml
+
 
       # 9. Deploy the Liquibase Job and wait for it to complete
       - name: Deploy Liquibase Job
