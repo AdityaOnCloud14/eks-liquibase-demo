@@ -97,7 +97,7 @@ jobs:
           echo "$DB_PASS" > ~/.pgpass
           chmod 600 ~/.pgpass
           echo "${{ steps.get_secrets.outputs.db_host }}:5432:*:${{ steps.get_secrets.outputs.db_user }}:${{ steps.get_secrets.outputs.db_pass }}" > ~/.pgpass
-          psql -h "${{ steps.get_secrets.outputs.db_host }}" -U "${{ steps.get_secrets.outputs.db_user }}" -d "${{ steps.get_secrets.outputs.db_name }}" -c "\l"
+          psql -h "${{ steps.get_secrets.outputs.db_host }}" -U "${{ steps.get_secrets.outputs.db_user }}" -d "${{ steps.get_secrets.outputs.db_name }}" -c "SELECT datname FROM pg_database WHERE datistemplate = false;"
         env:
           DB_PASS: ${{ steps.get_secrets.outputs.db_pass }}
 
