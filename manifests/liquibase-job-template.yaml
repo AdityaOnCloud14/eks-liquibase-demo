@@ -23,7 +23,7 @@ spec:
             - --depth=1
             - --single-branch
             - -b
-            - main
+            - feature/newpipeline
             - "https://github.com/AdityaOnCloud14/eks-liquibase-demo.git"
             - "/workspace"
           volumeMounts:
