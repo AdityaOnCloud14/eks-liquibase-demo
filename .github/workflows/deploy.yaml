@@ -45,7 +45,7 @@ jobs:
       # 2. Lint SQL files using SQLFluff
       - name: Lint SQL with SQLFluff
         run: |
-          pip install sqlfluff==3.2.0
+          pip3 install sqlfluff==3.2.0
           sqlfluff lint liquibase/ --dialect postgres
 
       # 3. Set AWS Role ARN based on the selected environment
