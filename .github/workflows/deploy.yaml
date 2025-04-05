@@ -73,7 +73,10 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV }}
           aws-region: us-east-1
           role-session-name: GitHubActionsSession
-    
+
+      - name: Configure kubectl with EKS context
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name my-lb-initcluster
 
       # 5. Retrieve DB Secrets from AWS SSM
       - name: Retrieve DB Secrets from SSM
