@@ -1,19 +1,38 @@
-name: Liquibase Migration Pipeline
+name: Liquibase Multi-Environment Deployment Pipeline
 
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Target environment: dev, test, or prod'
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
       operation:
-        description: 'Liquibase operation: update or rollback'
+        description: 'Operation: update or rollbackCount'
         required: true
         default: update
+        type: choice
+        options:
+          - update
+          - rollbackCount
       rollbackCount:
-        description: 'Number of changesets to rollback (e.g., 4 for full rollback)'
+        description: 'Number of changesets to rollback (if operation is rollbackCount)'
         required: false
+        default: "1"
+      target_db:
+        description: 'Name of the target database (choose from the list below)'
+        required: true
+        default: demo_db
 
 jobs:
-  liquibase:
+  deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
     steps:
       # 1. Checkout repository
       - name: Checkout Repo
@@ -25,50 +44,58 @@ jobs:
           pip install sqlfluff==3.2.0
           sqlfluff lint liquibase/ --dialect postgres
 
-      # 3. Configure AWS Credentials (ensure these are set as GitHub Secrets)
+      # 3. Configure AWS Credentials (stored in GitHub Secrets)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets["AWS_ROLE_ARN_" + github.event.inputs.environment | toUpperCase()] }}
           aws-region: us-east-1
 
-      # 4. Update kubeconfig for EKS
-      - name: Update kubeconfig for EKS
-        run: aws eks update-kubeconfig --name my-lb-initcluster
-
-      # 5. Deploy DB Credentials & Postgres manifests
-      - name: Deploy DB Credentials & Postgres
+      # 4. Retrieve DB Secrets from AWS SSM
+      - name: Retrieve DB Secrets from SSM
+        id: get_secrets
         run: |
-          kubectl apply -f manifests/db-credentials-secret.yaml -n liquibase-demo
-          kubectl apply -f manifests/postgres-deployment.yaml -n liquibase-demo
-          kubectl apply -f manifests/postgres-service.yaml -n liquibase-demo
+          ENV="${{ github.event.inputs.environment }}"
+          DB_HOST=$(aws ssm get-parameter --name "/${ENV}/db/DB_HOST" --with-decryption --query 'Parameter.Value' --output text)
+          DB_USER=$(aws ssm get-parameter --name "/${ENV}/db/DB_USER" --with-decryption --query 'Parameter.Value' --output text)
+          DB_PASS=$(aws ssm get-parameter --name "/${ENV}/db/DB_PASS" --with-decryption --query 'Parameter.Value' --output text)
+          # Use the user-specified target_db for DB_NAME
+          DB_NAME="${{ github.event.inputs.target_db }}"
+          echo "::set-output name=db_host::$DB_HOST"
+          echo "::set-output name=db_user::$DB_USER"
+          echo "::set-output name=db_pass::$DB_PASS"
+          echo "::set-output name=db_name::$DB_NAME"
 
-      # 6. Determine the Liquibase Command based on input
+      # 5. List Available Databases (so user can see which DBs exist)
+      - name: List Databases
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          echo "Listing databases on host: ${{ steps.get_secrets.outputs.db_host }}"
+          psql -h "${{ steps.get_secrets.outputs.db_host }}" -U "${{ steps.get_secrets.outputs.db_user }}" -c "\l"
+
+      # 6. Determine Liquibase Command based on input
       - name: Set Liquibase Command
         id: set_command
         run: |
           if [ "${{ github.event.inputs.operation }}" = "update" ]; then
             echo "command=update" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.inputs.operation }}" = "rollback" ]; then
-            if [ -z "${{ github.event.inputs.rollbackCount }}" ]; then
-              echo "command=rollback v1.0" >> $GITHUB_OUTPUT
-            else
-              # Ensure there's a space between 'rollbackCount' and the number.
-              echo "command=rollbackCount ${{ github.event.inputs.rollbackCount }}" >> $GITHUB_OUTPUT
-            fi
+          elif [ "${{ github.event.inputs.operation }}" = "rollbackCount" ]; then
+            echo "command=rollbackCount ${{ github.event.inputs.rollbackCount }}" >> $GITHUB_OUTPUT
           else
             echo "command=update" >> $GITHUB_OUTPUT
           fi
 
-      # 7. Generate the Liquibase Job manifest by substituting the placeholder
+      # 7. Generate Liquibase Job Manifest by substituting placeholders
       - name: Generate Liquibase Job Manifest
         run: |
+          # Replace the placeholder __LIQUIBASE_COMMAND__ with the actual command (update or rollbackCount N)
           sed "s|__LIQUIBASE_COMMAND__|${{ steps.set_command.outputs.command }}|g" manifests/liquibase-job-template.yaml > manifests/liquibase-job.yaml
-          echo "Generated Manifest:"
+          # Replace __TARGET_DB__ with the target database name
+          sed -i "s|__TARGET_DB__|${{ steps.get_secrets.outputs.db_name }}|g" manifests/liquibase-job.yaml
+          echo "Generated Liquibase Job Manifest:"
           cat manifests/liquibase-job.yaml
 
-      # 8. Deploy the Liquibase Job and wait for completion
+      # 8. Deploy Liquibase Job and wait for it to complete
       - name: Deploy Liquibase Job
         run: |
           kubectl apply -f manifests/liquibase-job.yaml -n liquibase-demo
@@ -77,6 +104,6 @@ jobs:
           echo "Liquibase Job Logs:"
           kubectl logs $POD -n liquibase-demo
 
-      # 9. Cleanup: Delete the Liquibase Job from the namespace
+      # 9. Cleanup Liquibase Job
       - name: Cleanup Liquibase Job
         run: kubectl delete job liquibase-job -n liquibase-demo
