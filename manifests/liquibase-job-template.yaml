@@ -6,8 +6,8 @@ metadata:
   labels:
     app: liquibase-migrator
 spec:
-  backoffLimit: 5              
-  #ttlSecondsAfterFinished: 300 
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 300
   template:
     spec:
       restartPolicy: OnFailure
