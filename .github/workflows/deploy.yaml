@@ -126,6 +126,7 @@ jobs:
           sed -i "s|__DB_NAME__|${{ steps.get_secrets.outputs.db_name }}|g" manifests/liquibase-job.yaml
           sed -i "s|__DB_USER__|${{ steps.get_secrets.outputs.db_user }}|g" manifests/liquibase-job.yaml
           sed -i "s|__DB_PASS__|${{ steps.get_secrets.outputs.db_pass }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__TARGET_DB__|${{ steps.get_secrets.outputs.db_name }}|g" manifests/liquibase-job.yaml
           sed -i "s|__LIQUIBASE_COMMAND__|${{ steps.set_command.outputs.command }}|g" manifests/liquibase-job.yaml
           echo "Generated Liquibase Job Manifest:"
           cat manifests/liquibase-job.yaml
