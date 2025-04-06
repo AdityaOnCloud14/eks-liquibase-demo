@@ -25,7 +25,7 @@ spec:
             - --depth=1
             - --single-branch
             - -b
-            - feature/newpipeline
+            - feature/removing-self-hosted-runner
             - "https://github.com/AdityaOnCloud14/eks-liquibase-demo.git"
             - "/workspace"
           volumeMounts:
