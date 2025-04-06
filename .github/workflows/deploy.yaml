@@ -86,7 +86,7 @@ jobs:
           echo "::set-output name=db_host::$DB_HOST"
           echo "::set-output name=db_user::$DB_USER"
           echo "::set-output name=db_name::$DB_NAME"
-          echo "::set-output name=db_name::$DB_PASS"
+          echo "::set-output name=db_pass::$DB_PASS"
 
 
       # 6. List Available Databases (optional, for user verification)
