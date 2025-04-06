@@ -8,24 +8,19 @@ on:
         required: true
         default: dev
         type: choice
-        options:
-          - dev
-          - test
-          - prod
+        options: [dev, test, prod]
       operation:
         description: 'Operation: update or rollbackCount'
         required: true
         default: update
         type: choice
-        options:
-          - update
-          - rollbackCount
+        options: [update, rollbackCount]
       rollbackCount:
-        description: 'Number of changesets to rollback (if operation is rollbackCount)'
+        description: 'Number of changesets to rollback (if rollbackCount)'
         required: false
         default: "1"
       target_db:
-        description: 'Database name where changes should be deployed'
+        description: 'Database name to deploy changes to'
         required: true
         default: demo_db
 
@@ -35,104 +30,70 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     steps:
-      # 1. Checkout repository
       - name: Checkout Repo
         uses: actions/checkout@v2
 
-      # 2. Lint SQL files using SQLFluff
-      - name: Lint SQL with SQLFluff
+      - name: Lint SQL Files with SQLFluff
         run: |
           pip3 install sqlfluff==3.2.0
           sqlfluff lint liquibase/ --dialect postgres
 
-      # 3. Set AWS Role ARN based on the selected environment
-      - name: Set AWS Role ARN
-        id: set_aws_role
+      - name: Set Role ARN Based on Environment
+        id: role
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
-            echo "::set-output name=aws_role::$AWS_ROLE_ARN_DEV"
-          elif [ "${{ github.event.inputs.environment }}" = "test" ]; then
-            echo "::set-output name=aws_role::$AWS_ROLE_ARN_TEST"
-          elif [ "${{ github.event.inputs.environment }}" = "prod" ]; then
-            echo "::set-output name=aws_role::$AWS_ROLE_ARN_PROD"
-          else
-            echo "::set-output name=aws_role::$AWS_ROLE_ARN_DEV"
-          fi
-        env:
-          AWS_ROLE_ARN_DEV: ${{ secrets.AWS_ROLE_ARN_DEV }}
-          AWS_ROLE_ARN_TEST: ${{ secrets.AWS_ROLE_ARN_TEST }}
-          AWS_ROLE_ARN_PROD: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          case "${{ github.event.inputs.environment }}" in
+            dev) echo "role_arn=${{ secrets.AWS_ROLE_ARN_DEV }}" >> $GITHUB_OUTPUT ;;
+            test) echo "role_arn=${{ secrets.AWS_ROLE_ARN_TEST }}" >> $GITHUB_OUTPUT ;;
+            prod) echo "role_arn=${{ secrets.AWS_ROLE_ARN_PROD }}" >> $GITHUB_OUTPUT ;;
+          esac
 
-      # 4. Configure AWS Credentials using the role ARN from step 3
-      - name: Configure AWS Credentials
+      - name: Configure AWS OIDC Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV }}
+          role-to-assume: ${{ steps.role.outputs.role_arn }}
           aws-region: us-east-1
-          role-session-name: GitHubActionsSession
 
-      # 5. Retrieve DB Secrets from AWS SSM
-      - name: Retrieve DB Secrets from SSM
-        id: get_secrets
+      - name: Retrieve DB Credentials from SSM
+        id: ssm
         run: |
           ENV="${{ github.event.inputs.environment }}"
           DB_HOST=$(aws ssm get-parameter --name "/${ENV}/db/DB_HOST" --with-decryption --query 'Parameter.Value' --output text)
           DB_USER=$(aws ssm get-parameter --name "/${ENV}/db/DB_USER" --with-decryption --query 'Parameter.Value' --output text)
           DB_PASS=$(aws ssm get-parameter --name "/${ENV}/db/DB_PASS" --with-decryption --query 'Parameter.Value' --output text)
           DB_NAME="${{ github.event.inputs.target_db }}"
-          echo "::set-output name=db_host::$DB_HOST"
-          echo "::set-output name=db_user::$DB_USER"
-          echo "::set-output name=db_name::$DB_NAME"
-          echo "::set-output name=db_pass::$DB_PASS"
 
+          echo "db_host=$DB_HOST" >> $GITHUB_OUTPUT
+          echo "db_user=$DB_USER" >> $GITHUB_OUTPUT
+          echo "db_pass=$DB_PASS" >> $GITHUB_OUTPUT
+          echo "db_name=$DB_NAME" >> $GITHUB_OUTPUT
 
-      # 6. List Available Databases (optional, for user verification)
-      # 6. List Databases
-      #- name: List Databases
-        #run: |
-         # echo "$DB_PASS" > ~/.pgpass
-          #chmod 600 ~/.pgpass
-          #echo "${{ steps.get_secrets.outputs.db_host }}:5432:*:${{ steps.get_secrets.outputs.db_user }}:${{ steps.get_secrets.outputs.db_pass }}" > ~/.pgpass
-          #psql -h "${{ steps.get_secrets.outputs.db_host }}" -U "${{ steps.get_secrets.outputs.db_user }}" -d "${{ steps.get_secrets.outputs.db_name }}" -c "SELECT datname FROM pg_database WHERE datistemplate = false;"
-        #env:
-          #DB_PASS: ${{ steps.get_secrets.outputs.db_pass }}
-
-      - name: Update kubeconfig for EKS
+      - name: Update Kubeconfig
         run: |
-          aws eks update-kubeconfig \
-          --region us-east-1 \
-          --name my-lb-initcluster
+          aws eks update-kubeconfig --region us-east-1 --name my-lb-initcluster
 
-      # 7. Determine the Liquibase Command based on input
       - name: Set Liquibase Command
-        id: set_command
+        id: cmd
         run: |
-          if [ "${{ github.event.inputs.operation }}" = "update" ]; then
-            echo "command=update" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.inputs.operation }}" = "rollbackCount" ]; then
+          if [[ "${{ github.event.inputs.operation }}" == "rollbackCount" ]]; then
             echo "command=rollbackCount ${{ github.event.inputs.rollbackCount }}" >> $GITHUB_OUTPUT
           else
             echo "command=update" >> $GITHUB_OUTPUT
           fi
 
-      # 8. Generate the Liquibase Job Manifest by substituting placeholders
       - name: Generate Liquibase Job Manifest
         run: |
           cp manifests/liquibase-job-template.yaml manifests/liquibase-job.yaml
-          sed -i "s|__DB_HOST__|${{ steps.get_secrets.outputs.db_host }}|g" manifests/liquibase-job.yaml
-          sed -i "s|__DB_NAME__|${{ steps.get_secrets.outputs.db_name }}|g" manifests/liquibase-job.yaml
-          sed -i "s|__DB_USER__|${{ steps.get_secrets.outputs.db_user }}|g" manifests/liquibase-job.yaml
-          sed -i "s|__DB_PASS__|${{ steps.get_secrets.outputs.db_pass }}|g" manifests/liquibase-job.yaml
-          sed -i "s|__TARGET_DB__|${{ steps.get_secrets.outputs.db_name }}|g" manifests/liquibase-job.yaml
-          sed -i "s|__LIQUIBASE_COMMAND__|${{ steps.set_command.outputs.command }}|g" manifests/liquibase-job.yaml
-          echo "Generated Liquibase Job Manifest:"
-          cat manifests/liquibase-job.yaml
+          sed -i "s|__DB_HOST__|${{ steps.ssm.outputs.db_host }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__DB_NAME__|${{ steps.ssm.outputs.db_name }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__DB_USER__|${{ steps.ssm.outputs.db_user }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__DB_PASS__|${{ steps.ssm.outputs.db_pass }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__LIQUIBASE_COMMAND__|${{ steps.cmd.outputs.command }}|g" manifests/liquibase-job.yaml
+          sed -i "s|__TARGET_DB__|${{ steps.ssm.outputs.db_name }}|g" manifests/liquibase-job.yaml
 
-      # 9. Deploy the Liquibase Job and wait for it to complete
-      - name: Deploy Liquibase Job
+      - name: Deploy Liquibase Job to EKS
         run: |
           kubectl apply -f manifests/liquibase-job.yaml -n liquibase-demo
           kubectl wait --for=condition=complete job/liquibase-job -n liquibase-demo --timeout=300s
@@ -140,6 +101,5 @@ jobs:
           echo "Liquibase Job Logs:"
           kubectl logs $POD -n liquibase-demo
 
-      # 10. Cleanup Liquibase Job
       - name: Cleanup Liquibase Job
-        run: kubectl delete job liquibase-job -n liquibase-demo
+        run: kubectl delete job liquibase-job -n liquibase-demo || true

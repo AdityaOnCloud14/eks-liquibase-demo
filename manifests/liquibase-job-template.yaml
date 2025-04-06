@@ -7,7 +7,6 @@ metadata:
     app: liquibase-migrator
 spec:
   backoffLimit: 5
-  #ttlSecondsAfterFinished: 300
   template:
     metadata:
       labels:
@@ -48,20 +47,11 @@ spec:
           volumeMounts:
             - name: changelog-volume
               mountPath: /workspace
-          workingDir: /workspace
+          workingDir: /workspace/liquibase
           command: ["/bin/sh"]
           args:
             - "-c"
             - |
-              HOST="$DB_HOST"
-              NAME="$DB_NAME"
-              TARGET_DB="__TARGET_DB__"
-              if [ "$TARGET_DB" != "__TARGET_DB__" ]; then
-                NAME="$TARGET_DB"
-              fi
-              USER="$DB_USER"
-              PASS="$DB_PASS"
-              JDBC_URL="jdbc:postgresql://${HOST}:5432/${NAME}"
+              JDBC_URL="jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}"
               echo "Running Liquibase command against ${JDBC_URL}"
-              cd /workspace/liquibase
-              liquibase --url="$JDBC_URL" --username="$USER" --password="$PASS" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
+              liquibase --url="$JDBC_URL" --username="$DB_USER" --password="$DB_PASS" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
