@@ -130,7 +130,6 @@ jobs:
           echo "Generated Liquibase Job Manifest:"
           cat manifests/liquibase-job.yaml
 
-
       # 9. Deploy the Liquibase Job and wait for it to complete
       - name: Deploy Liquibase Job
         run: |
