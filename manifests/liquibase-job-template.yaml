@@ -6,14 +6,16 @@ metadata:
   labels:
     app: liquibase-migrator
 spec:
-  backoffLimit: 0              # Fail fast if the job fails
-  ttlSecondsAfterFinished: 300 # Clean up job resources 5 minutes after finish
+  backoffLimit: 5
   template:
+    metadata:
+      labels:
+        app: liquibase
     spec:
       restartPolicy: OnFailure
       volumes:
         - name: changelog-volume
-          emptyDir: {}         # Ephemeral volume for both init & main containers
+          emptyDir: {}
       initContainers:
         - name: git-clone
           image: alpine/git:latest
@@ -23,7 +25,7 @@ spec:
             - --depth=1
             - --single-branch
             - -b
-            - main
+            - feature/removing-self-hosted-runner
             - "https://github.com/AdityaOnCloud14/eks-liquibase-demo.git"
             - "/workspace"
           volumeMounts:
@@ -35,38 +37,21 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: DB_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: db-credentials
-                  key: DB_HOST
+              value: "__DB_HOST__"
             - name: DB_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: db-credentials
-                  key: DB_NAME
+              value: "__DB_NAME__"
             - name: DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: db-credentials
-                  key: DB_USER
+              value: "__DB_USER__"
             - name: DB_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: db-credentials
-                  key: DB_PASS
+              value: "__DB_PASS__"
           volumeMounts:
             - name: changelog-volume
               mountPath: /workspace
-          workingDir: /workspace
+          workingDir: /workspace/liquibase
           command: ["/bin/sh"]
           args:
             - "-c"
             - |
-              HOST="$DB_HOST"
-              NAME="$DB_NAME"
-              USER="$DB_USER"
-              PASS="$DB_PASS"
-              JDBC_URL="jdbc:postgresql://${HOST}:5432/${NAME}"
+              JDBC_URL="jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}"
               echo "Running Liquibase command against ${JDBC_URL}"
-              cd /workspace/liquibase
-              liquibase --url="$JDBC_URL" --username="$USER" --password="$PASS" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
+              liquibase --url="$JDBC_URL" --username="$DB_USER" --password="$DB_PASS" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
