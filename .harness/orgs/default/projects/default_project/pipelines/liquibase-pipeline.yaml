@@ -1,5 +1,5 @@
 pipeline:
-  name: Liquibase Multi‑Env Pipeline
+  name: Liquibase Multi Env Pipeline
   identifier: Liquibase_Pipeline
   orgIdentifier: default
   projectIdentifier: default_project
@@ -30,7 +30,6 @@ pipeline:
     - name: target_db
       type: String
       default: demo_db
-
 
   stages:
     # ────────── DEV ──────────
@@ -69,18 +68,19 @@ pipeline:
                         value: DEV_DB_PASS
                     source:
                       type: Inline
-                      script: |
-                        cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                        sed -i "s|__DB_HOST__|$DB_HOST|g"       ci_manifest.yaml
-                        sed -i "s|__TARGET_DB__|$DB_NAME|g"     ci_manifest.yaml
-                        sed -i "s|__DB_USER__|$DB_USER|g"       ci_manifest.yaml
-                        sed -i "s|__DB_PASS__|$DB_PASS|g"       ci_manifest.yaml
-                        if [ "${operation}" = "rollbackCount" ]; then
-                          cmd="rollbackCount ${rollbackCount}"
-                        else
-                          cmd="update"
-                        fi
-                        sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
+                      spec:
+                        script: |
+                          cp manifests/liquibase-job-template.yaml ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"       ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$DB_NAME|g"     ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"       ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g"       ci_manifest.yaml
+                          if [ "${operation}" = "rollbackCount" ]; then
+                            cmd="rollbackCount ${rollbackCount}"
+                          else
+                            cmd="update"
+                          fi
+                          sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
 
               - step:
                   name: Deploy Liquibase Job (Dev)
@@ -90,17 +90,18 @@ pipeline:
                     shell: Bash
                     source:
                       type: Inline
-                      script: |
-                        aws eks update-kubeconfig \
-                          --name my-lb-initcluster --region us-east-1
-                        kubectl apply -f ci_manifest.yaml -n liquibase-demo
-                        kubectl wait --for=condition=complete \
-                          job/liquibase-job -n liquibase-demo --timeout=300s
-                        POD=$(kubectl get pods -n liquibase-demo \
-                          -l job-name=liquibase-job \
-                          -o jsonpath="{.items[0].metadata.name}")
-                        echo "── Liquibase Job Logs (Dev) ──"
-                        kubectl logs $POD -n liquibase-demo
+                      spec:
+                        script: |
+                          aws eks update‑kubeconfig \
+                            --name my‑lb‑initcluster --region us‑east‑1
+                          kubectl apply ‑f ci_manifest.yaml ‑n liquibase‑demo
+                          kubectl wait ‑‑for=condition=complete \
+                            job/liquibase‑job ‑n liquibase‑demo ‑‑timeout=300s
+                          POD=$(kubectl get pods ‑n liquibase‑demo \
+                            ‑l job‑name=liquibase‑job \
+                            ‑o jsonpath="{.items[0].metadata.name}")
+                          echo "── Liquibase Job Logs (Dev) ──"
+                          kubectl logs $POD ‑n liquibase‑demo
 
               - step:
                   name: Cleanup Job (Dev)
@@ -110,9 +111,10 @@ pipeline:
                     shell: Bash
                     source:
                       type: Inline
-                      script: |
-                        kubectl delete job liquibase-job \
-                          -n liquibase-demo || true
+                      spec:
+                        script: |
+                          kubectl delete job liquibase-job \
+                            -n liquibase-demo || true
 
     # ────────── TEST ──────────
     - stage:
@@ -160,18 +162,19 @@ pipeline:
                         value: TEST_DB_PASS
                     source:
                       type: Inline
-                      script: |
-                        cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                        sed -i "s|__DB_HOST__|$DB_HOST|g"       ci_manifest.yaml
-                        sed -i "s|__TARGET_DB__|$DB_NAME|g"     ci_manifest.yaml
-                        sed -i "s|__DB_USER__|$DB_USER|g"       ci_manifest.yaml
-                        sed -i "s|__DB_PASS__|$DB_PASS|g"       ci_manifest.yaml
-                        if [ "${operation}" = "rollbackCount" ]; then
-                          cmd="rollbackCount ${rollbackCount}"
-                        else
-                          cmd="update"
-                        fi
-                        sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
+                      spec:
+                        script: |
+                          cp manifests/liquibase-job-template.yaml ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"       ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$DB_NAME|g"     ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"       ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g"       ci_manifest.yaml
+                          if [ "${operation}" = "rollbackCount" ]; then
+                            cmd="rollbackCount ${rollbackCount}"
+                          else
+                            cmd="update"
+                          fi
+                          sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
 
               - step:
                   name: Deploy Liquibase Job (Test)
@@ -181,17 +184,18 @@ pipeline:
                     shell: Bash
                     source:
                       type: Inline
-                      script: |
-                        aws eks update-kubeconfig \
-                          --name my-lb-initcluster --region us-east-1
-                        kubectl apply -f ci_manifest.yaml -n liquibase-demo
-                        kubectl wait --for=condition=complete \
-                          job/liquibase-job -n liquibase-demo --timeout=300s
-                        POD=$(kubectl get pods -n liquibase-demo \
-                          -l job-name=liquibase-job \
-                          -o jsonpath="{.items[0].metadata.name}")
-                        echo "── Liquibase Job Logs (Test) ──"
-                        kubectl logs $POD -n liquibase-demo
+                      spec:
+                        script: |
+                          aws eks update‑kubeconfig \
+                            --name my‑lb‑initcluster --region us‑east‑1
+                          kubectl apply ‑f ci_manifest.yaml ‑n liquibase‑demo
+                          kubectl wait ‑‑for=condition=complete \
+                            job/liquibase‑job ‑n liquibase‑demo ‑‑timeout=300s
+                          POD=$(kubectl get pods ‑n liquibase‑demo \
+                            ‑l job‑name=liquibase‑job \
+                            ‑o jsonpath="{.items[0].metadata.name}")
+                          echo "── Liquibase Job Logs (Test) ──"
+                          kubectl logs $POD ‑n liquibase‑demo
 
               - step:
                   name: Cleanup Job (Test)
@@ -201,9 +205,10 @@ pipeline:
                     shell: Bash
                     source:
                       type: Inline
-                      script: |
-                        kubectl delete job liquibase-job \
-                          -n liquibase-demo || true
+                      spec:
+                        script: |
+                          kubectl delete job liquibase-job \
+                            -n liquibase-demo || true
 
     # ────────── PROD ──────────
     - stage:
@@ -251,18 +256,19 @@ pipeline:
                         value: PROD_DB_PASS
                     source:
                       type: Inline
-                      script: |
-                        cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                        sed -i "s|__DB_HOST__|$DB_HOST|g"       ci_manifest.yaml
-                        sed -i "s|__TARGET_DB__|$DB_NAME|g"     ci_manifest.yaml
-                        sed -i "s|__DB_USER__|$DB_USER|g"       ci_manifest.yaml
-                        sed -i "s|__DB_PASS__|$DB_PASS|g"       ci_manifest.yaml
-                        if [ "${operation}" = "rollbackCount" ]; then
-                          cmd="rollbackCount ${rollbackCount}"
-                        else
-                          cmd="update"
-                        fi
-                        sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
+                      spec:
+                        script: |
+                          cp manifests/liquibase-job-template.yaml ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"       ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$DB_NAME|g"     ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"       ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g"       ci_manifest.yaml
+                          if [ "${operation}" = "rollbackCount" ]; then
+                            cmd="rollbackCount ${rollbackCount}"
+                          else
+                            cmd="update"
+                          fi
+                          sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
 
               - step:
                   name: Deploy Liquibase Job (Prod)
@@ -272,17 +278,18 @@ pipeline:
                     shell: Bash
                     source:
                       type: Inline
-                      script: |
-                        aws eks update-kubeconfig \
-                          --name my-lb-initcluster --region us-east-1
-                        kubectl apply -f ci_manifest.yaml -n liquibase-demo
-                        kubectl wait --for=condition=complete \
-                          job/liquibase-job -n liquibase-demo --timeout=300s
-                        POD=$(kubectl get pods -n liquibase-demo \
-                          -l job-name=liquibase-job \
-                          -o jsonpath="{.items[0].metadata.name}")
-                        echo "── Liquibase Job Logs (Prod) ──"
-                        kubectl logs $POD -n liquibase-demo
+                      spec:
+                        script: |
+                          aws eks update‑kubeconfig \
+                            --name my‑lb‑initcluster --region us‑east‑1
+                          kubectl apply ‑f ci_manifest.yaml ‑n liquibase‑demo
+                          kubectl wait ‑‑for=condition=complete \
+                            job/liquibase‑job ‑n liquibase‑demo ‑‑timeout=300s
+                          POD=$(kubectl get pods ‑n liquibase‑demo \
+                            ‑l job‑name=liquibase‑job \
+                            ‑o jsonpath="{.items[0].metadata.name}")
+                          echo "── Liquibase Job Logs (Prod) ──"
+                          kubectl logs $POD ‑n liquibase‑demo
 
               - step:
                   name: Cleanup Job (Prod)
@@ -292,6 +299,7 @@ pipeline:
                     shell: Bash
                     source:
                       type: Inline
-                      script: |
-                        kubectl delete job liquibase-job \
-                          -n liquibase-demo || true
+                      spec:
+                        script: |
+                          kubectl delete job liquibase-job \
+                            -n liquibase-demo || true
