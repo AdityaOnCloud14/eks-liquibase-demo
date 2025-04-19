@@ -1,11 +1,11 @@
 pipeline:
-  name: Liquibase Multi‑Env Pipeline
+  name: Liquibase Multi Env Pipeline
   identifier: Liquibase_Pipeline
   orgIdentifier: default
   projectIdentifier: default_project
   description: |
     Deploy or rollback Liquibase changes to Dev, Test and Prod EKS clusters,
-    using per‑environment Harness Secrets for DB credentials and IRSA‑backed
+    using per environment Harness Secrets for DB credentials and IRSA backed
     EKS connector. Each stage automatically generates a K8s Job manifest from
     a shared template, runs it, then always cleans up.
 
