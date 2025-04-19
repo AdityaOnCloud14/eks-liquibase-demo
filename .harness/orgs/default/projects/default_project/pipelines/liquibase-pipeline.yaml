@@ -10,7 +10,7 @@ pipeline:
     then always cleans up.
 
   repo:
-    connectorRef: github_connector        # your Harness GitHub connector
+    connectorRef: github_conenctor        # your Harness GitHub connector
     repositoryName: AdityaOnCloud14/eks-liquibase-demo
     branch: main
     repoRoot: .
@@ -22,12 +22,15 @@ pipeline:
       allowedValues:
         - update
         - rollbackCount
+
     - name: rollbackCount
       type: Number
       default: 1
+
     - name: target_db
       type: String
       default: demo_db
+
 
   stages:
     # ────────── DEV ──────────
@@ -50,46 +53,48 @@ pipeline:
           execution:
             steps:
               - step:
-                  name: Generate Manifest Dev
-                  identifier: genManifestDev
+                  name: GenerateManifestDev
+                  identifier: GenerateManifestDev
                   type: ShellScript
                   spec:
                     shell: Bash
+                    onDelegate: true
                     environmentVariables:
                       - name: DB_HOST
-                        type: SecretRef
+                        type: Secret
                         value: <+secrets.getValue("dev_db_host")>
                       - name: DB_NAME
                         type: Text
                         value: <+pipeline.variables.target_db>
                       - name: DB_USER
-                        type: SecretRef
+                        type: Secret
                         value: <+secrets.getValue("dev_db_user")>
                       - name: DB_PASS
-                        type: SecretRef
+                        type: Secret
                         value: <+secrets.getValue("dev_db_pass")>
                     source:
                       type: Inline
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$DB_NAME|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASS__|$DB_PASS|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"             ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$DB_NAME|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"             ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g"             ci_manifest.yaml
                           if [ "${operation}" = "rollbackCount" ]; then
                             cmd="rollbackCount ${rollbackCount}"
                           else
                             cmd="update"
                           fi
-                          sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
+                          sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g"       ci_manifest.yaml
 
               - step:
-                  name: Deploy Job Dev
-                  identifier: deployJobDev
+                  name: DeployJobDev
+                  identifier: DeployJobDev
                   type: ShellScript
                   spec:
                     shell: Bash
+                    onDelegate: true
                     source:
                       type: Inline
                       spec:
@@ -100,15 +105,16 @@ pipeline:
                             -n liquibase-demo --timeout=300s
                           POD=$(kubectl get pods -n liquibase-demo \
                             -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
-                          echo "Liquibase Job Logs (Dev):"
+                          echo "── Liquibase Job Logs (Dev) ──"
                           kubectl logs $POD -n liquibase-demo
 
               - step:
-                  name: Cleanup Job Dev
-                  identifier: cleanupJobDev
+                  name: CleanupJobDev
+                  identifier: CleanupJobDev
                   type: ShellScript
                   spec:
                     shell: Bash
+                    onDelegate: true
                     source:
                       type: Inline
                       spec:
@@ -135,56 +141,61 @@ pipeline:
           execution:
             steps:
               - step:
-                  name: Approve Test
-                  identifier: approveTest
+                  name: ApproveTest
+                  identifier: ApproveTest
                   type: HarnessApproval
                   spec:
                     approvalMessage: "Approve deployment to TEST?"
                     approvers:
                       userGroups: ["_account_all_users"]
+                    includePipelineExecutionHistory: false
+                    minimumCount: 1
+                    disallowPipelineExecutor: false
                     timeout: 2h
 
               - step:
-                  name: Generate Manifest Test
-                  identifier: genManifestTest
+                  name: GenerateManifestTest
+                  identifier: GenerateManifestTest
                   type: ShellScript
                   spec:
                     shell: Bash
+                    onDelegate: true
                     environmentVariables:
                       - name: DB_HOST
-                        type: SecretRef
+                        type: Secret
                         value: <+secrets.getValue("test_db_host")>
                       - name: DB_NAME
                         type: Text
                         value: <+pipeline.variables.target_db>
                       - name: DB_USER
-                        type: SecretRef
+                        type: Secret
                         value: <+secrets.getValue("test_db_user")>
                       - name: DB_PASS
-                        type: SecretRef
+                        type: Secret
                         value: <+secrets.getValue("test_db_pass")>
                     source:
                       type: Inline
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$DB_NAME|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASS__|$DB_PASS|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"             ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$DB_NAME|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"             ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g"             ci_manifest.yaml
                           if [ "${operation}" = "rollbackCount" ]; then
                             cmd="rollbackCount ${rollbackCount}"
                           else
                             cmd="update"
                           fi
-                          sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
+                          sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g"       ci_manifest.yaml
 
               - step:
-                  name: Deploy Job Test
-                  identifier: deployJobTest
+                  name: DeployJobTest
+                  identifier: DeployJobTest
                   type: ShellScript
                   spec:
                     shell: Bash
+                    onDelegate: true
                     source:
                       type: Inline
                       spec:
@@ -195,15 +206,16 @@ pipeline:
                             -n liquibase-demo --timeout=300s
                           POD=$(kubectl get pods -n liquibase-demo \
                             -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
-                          echo "Liquibase Job Logs (Test):"
+                          echo "── Liquibase Job Logs (Test) ──"
                           kubectl logs $POD -n liquibase-demo
 
               - step:
-                  name: Cleanup Job Test
-                  identifier: cleanupJobTest
+                  name: CleanupJobTest
+                  identifier: CleanupJobTest
                   type: ShellScript
                   spec:
                     shell: Bash
+                    onDelegate: true
                     source:
                       type: Inline
                       spec:
@@ -230,56 +242,61 @@ pipeline:
           execution:
             steps:
               - step:
-                  name: Approve Prod
-                  identifier: approveProd
+                  name: ApproveProd
+                  identifier: ApproveProd
                   type: HarnessApproval
                   spec:
                     approvalMessage: "Approve deployment to PROD?"
                     approvers:
                       userGroups: ["_account_all_users"]
+                    includePipelineExecutionHistory: false
+                    minimumCount: 1
+                    disallowPipelineExecutor: false
                     timeout: 4h
 
               - step:
-                  name: Generate Manifest Prod
-                  identifier: genManifestProd
+                  name: GenerateManifestProd
+                  identifier: GenerateManifestProd
                   type: ShellScript
                   spec:
                     shell: Bash
+                    onDelegate: true
                     environmentVariables:
                       - name: DB_HOST
-                        type: SecretRef
+                        type: Secret
                         value: <+secrets.getValue("prod_db_host")>
                       - name: DB_NAME
                         type: Text
                         value: <+pipeline.variables.target_db>
                       - name: DB_USER
-                        type: SecretRef
+                        type: Secret
                         value: <+secrets.getValue("prod_db_user")>
                       - name: DB_PASS
-                        type: SecretRef
+                        type: Secret
                         value: <+secrets.getValue("prod_db_pass")>
                     source:
                       type: Inline
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$DB_NAME|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASS__|$DB_PASS|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"             ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$DB_NAME|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"             ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g"             ci_manifest.yaml
                           if [ "${operation}" = "rollbackCount" ]; then
                             cmd="rollbackCount ${rollbackCount}"
                           else
                             cmd="update"
                           fi
-                          sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
+                          sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g"       ci_manifest.yaml
 
               - step:
-                  name: Deploy Job Prod
-                  identifier: deployJobProd
+                  name: DeployJobProd
+                  identifier: DeployJobProd
                   type: ShellScript
                   spec:
                     shell: Bash
+                    onDelegate: true
                     source:
                       type: Inline
                       spec:
@@ -290,15 +307,16 @@ pipeline:
                             -n liquibase-demo --timeout=300s
                           POD=$(kubectl get pods -n liquibase-demo \
                             -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
-                          echo "Liquibase Job Logs (Prod):"
+                          echo "── Liquibase Job Logs (Prod) ──"
                           kubectl logs $POD -n liquibase-demo
 
               - step:
-                  name: Cleanup Job Prod
-                  identifier: cleanupJobProd
+                  name: CleanupJobProd
+                  identifier: CleanupJobProd
                   type: ShellScript
                   spec:
                     shell: Bash
+                    onDelegate: true
                     source:
                       type: Inline
                       spec:
