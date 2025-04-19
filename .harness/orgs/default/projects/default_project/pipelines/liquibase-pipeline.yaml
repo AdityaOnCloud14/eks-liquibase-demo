@@ -24,12 +24,12 @@ pipeline:
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: LiquibaseService                   # ← your Harness Service
+            serviceRef: liquibase_service                   # ← your Harness Service
           environment:
             environmentRef: dev                            # ← your Dev environment
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: dev                      # ← your Dev infra def’n
+              - identifier: eks_connector                      # ← your Dev infra def’n
           execution:
             steps:
 
@@ -134,12 +134,12 @@ pipeline:
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: LiquibaseService
+            serviceRef: liquibase_service
           environment:
             environmentRef: test
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: test
+              - identifier: eks_connector
           execution:
             steps:
 
@@ -250,12 +250,12 @@ pipeline:
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: LiquibaseService
+            serviceRef: liquibase_service
           environment:
             environmentRef: prod
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: prod
+              - identifier: eks_connector
           execution:
             steps:
 
