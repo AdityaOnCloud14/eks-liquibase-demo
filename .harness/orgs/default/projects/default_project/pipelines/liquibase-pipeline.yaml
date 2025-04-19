@@ -2,7 +2,7 @@ pipeline:
   name: Liquibase Multi‑Env Pipeline
   identifier: Liquibase_Pipeline
   orgIdentifier: default
-  projectIdentifier: Default_Project
+  projectIdentifier: default_project
   description: |
     Deploy or rollback Liquibase changes to Dev, Test and Prod EKS clusters,
     using per‑environment Harness Secrets for DB credentials and IRSA‑backed
@@ -10,7 +10,7 @@ pipeline:
     a shared template, runs it, then always cleans up.
 
   repo:
-    connectorRef: github_connector        # your Harness GitHub connector
+    connectorRef: github_conenctor     # your Harness GitHub connector
     repositoryName: AdityaOnCloud14/eks-liquibase-demo
     branch: main
     repoRoot: .
