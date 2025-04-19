@@ -10,7 +10,7 @@ pipeline:
     then always cleans up.
 
   repo:
-    connectorRef: github_connector        # your GitHub connector
+    connectorRef: github_conenctor        # your GitHub connector
     repositoryName: AdityaOnCloud14/eks-liquibase-demo
     branch: main
     repoRoot: .
