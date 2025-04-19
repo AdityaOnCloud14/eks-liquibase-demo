@@ -1,43 +1,46 @@
 pipeline:
-  name: Liquibase Multi‑Env Pipeline
+  name: Liquibase Multi Env Pipeline
   identifier: Liquibase_Pipeline
   orgIdentifier: default
   projectIdentifier: default_project
   description: |
     Deploy or rollback Liquibase changes to Dev, Test and Prod EKS clusters,
     using per‑environment Harness Secrets for DB credentials and IRSA‑backed
-    EKS connector. Each stage generates a K8s Job manifest from a shared
-    template, runs it, then always cleans up.
+    EKS connector. Each stage auto‑generates a K8s Job manifest, runs it,
+    then always cleans up.
 
   repo:
-    connectorRef: github_conenctor           # your Harness GitHub connector
+    connectorRef: github_connector        # your Harness GitHub connector
     repositoryName: AdityaOnCloud14/eks-liquibase-demo
     branch: main
     repoRoot: .
 
-  # pipeline inputs
   variables:
     - name: operation
       type: String
       default: update
-      allowedValues: [ update, rollbackCount ]
-
+      allowedValues:
+        - update
+        - rollbackCount
     - name: rollbackCount
-      type: String
-      default: "1"
-
+      type: Number
+      default: 1
     - name: target_db
       type: String
       default: demo_db
 
   stages:
-    # ───────── DEV ─────────
+    # ────────── DEV ──────────
     - stage:
         name: Dev
         identifier: Dev
         type: Deployment
         spec:
           deploymentType: Kubernetes
+          failureStrategies:
+            - onFailure:
+                action:
+                  type: Ignore
           service:
             serviceRef: liquibase_service
           environment:
@@ -47,33 +50,33 @@ pipeline:
           execution:
             steps:
               - step:
-                  name: Generate Manifest (Dev)
-                  identifier: gen_manifest_dev
+                  name: Generate Manifest Dev
+                  identifier: genManifestDev
                   type: ShellScript
                   spec:
                     shell: Bash
                     environmentVariables:
                       - name: DB_HOST
-                        type: Secret
-                        value: <+secrets.getValue("DEV_DB_HOST")>
+                        type: SecretRef
+                        value: <+secrets.getValue("dev_db_host")>
                       - name: DB_NAME
-                        type: Secret
-                        value: <+secrets.getValue("DEV_DB_NAME")>
+                        type: Text
+                        value: <+pipeline.variables.target_db>
                       - name: DB_USER
-                        type: Secret
-                        value: <+secrets.getValue("DEV_DB_USER")>
+                        type: SecretRef
+                        value: <+secrets.getValue("dev_db_user")>
                       - name: DB_PASS
-                        type: Secret
-                        value: <+secrets.getValue("DEV_DB_PASS")>
+                        type: SecretRef
+                        value: <+secrets.getValue("dev_db_pass")>
                     source:
                       type: Inline
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g"       ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$DB_NAME|g"     ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g"       ci_manifest.yaml
-                          sed -i "s|__DB_PASS__|$DB_PASS|g"       ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$DB_NAME|g" ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g" ci_manifest.yaml
                           if [ "${operation}" = "rollbackCount" ]; then
                             cmd="rollbackCount ${rollbackCount}"
                           else
@@ -82,8 +85,8 @@ pipeline:
                           sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
 
               - step:
-                  name: Deploy Liquibase Job (Dev)
-                  identifier: deploy_dev
+                  name: Deploy Job Dev
+                  identifier: deployJobDev
                   type: ShellScript
                   spec:
                     shell: Bash
@@ -97,12 +100,12 @@ pipeline:
                             -n liquibase-demo --timeout=300s
                           POD=$(kubectl get pods -n liquibase-demo \
                             -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
-                          echo "── Liquibase Job Logs (Dev) ──"
+                          echo "Liquibase Job Logs (Dev):"
                           kubectl logs $POD -n liquibase-demo
 
               - step:
-                  name: Cleanup Job (Dev)
-                  identifier: cleanup_dev
+                  name: Cleanup Job Dev
+                  identifier: cleanupJobDev
                   type: ShellScript
                   spec:
                     shell: Bash
@@ -112,13 +115,17 @@ pipeline:
                         script: |
                           kubectl delete job liquibase-job -n liquibase-demo || true
 
-    # ───────── TEST ─────────
+    # ────────── TEST ──────────
     - stage:
         name: Test
         identifier: Test
         type: Deployment
         spec:
           deploymentType: Kubernetes
+          failureStrategies:
+            - onFailure:
+                action:
+                  type: Ignore
           service:
             serviceRef: liquibase_service
           environment:
@@ -128,8 +135,8 @@ pipeline:
           execution:
             steps:
               - step:
-                  name: Approval before Test
-                  identifier: approve_test
+                  name: Approve Test
+                  identifier: approveTest
                   type: HarnessApproval
                   spec:
                     approvalMessage: "Approve deployment to TEST?"
@@ -138,33 +145,33 @@ pipeline:
                     timeout: 2h
 
               - step:
-                  name: Generate Manifest (Test)
-                  identifier: gen_manifest_test
+                  name: Generate Manifest Test
+                  identifier: genManifestTest
                   type: ShellScript
                   spec:
                     shell: Bash
                     environmentVariables:
                       - name: DB_HOST
-                        type: Secret
-                        value: <+secrets.getValue("TEST_DB_HOST")>
+                        type: SecretRef
+                        value: <+secrets.getValue("test_db_host")>
                       - name: DB_NAME
-                        type: Secret
-                        value: <+secrets.getValue("TEST_DB_NAME")>
+                        type: Text
+                        value: <+pipeline.variables.target_db>
                       - name: DB_USER
-                        type: Secret
-                        value: <+secrets.getValue("TEST_DB_USER")>
+                        type: SecretRef
+                        value: <+secrets.getValue("test_db_user")>
                       - name: DB_PASS
-                        type: Secret
-                        value: <+secrets.getValue("TEST_DB_PASS")>
+                        type: SecretRef
+                        value: <+secrets.getValue("test_db_pass")>
                     source:
                       type: Inline
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g"       ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$DB_NAME|g"     ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g"       ci_manifest.yaml
-                          sed -i "s|__DB_PASS__|$DB_PASS|g"       ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$DB_NAME|g" ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g" ci_manifest.yaml
                           if [ "${operation}" = "rollbackCount" ]; then
                             cmd="rollbackCount ${rollbackCount}"
                           else
@@ -173,8 +180,8 @@ pipeline:
                           sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
 
               - step:
-                  name: Deploy Liquibase Job (Test)
-                  identifier: deploy_test
+                  name: Deploy Job Test
+                  identifier: deployJobTest
                   type: ShellScript
                   spec:
                     shell: Bash
@@ -188,12 +195,12 @@ pipeline:
                             -n liquibase-demo --timeout=300s
                           POD=$(kubectl get pods -n liquibase-demo \
                             -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
-                          echo "── Liquibase Job Logs (Test) ──"
+                          echo "Liquibase Job Logs (Test):"
                           kubectl logs $POD -n liquibase-demo
 
               - step:
-                  name: Cleanup Job (Test)
-                  identifier: cleanup_test
+                  name: Cleanup Job Test
+                  identifier: cleanupJobTest
                   type: ShellScript
                   spec:
                     shell: Bash
@@ -203,13 +210,17 @@ pipeline:
                         script: |
                           kubectl delete job liquibase-job -n liquibase-demo || true
 
-    # ───────── PROD ─────────
+    # ────────── PROD ──────────
     - stage:
         name: Prod
         identifier: Prod
         type: Deployment
         spec:
           deploymentType: Kubernetes
+          failureStrategies:
+            - onFailure:
+                action:
+                  type: Ignore
           service:
             serviceRef: liquibase_service
           environment:
@@ -219,8 +230,8 @@ pipeline:
           execution:
             steps:
               - step:
-                  name: Approval before Prod
-                  identifier: approve_prod
+                  name: Approve Prod
+                  identifier: approveProd
                   type: HarnessApproval
                   spec:
                     approvalMessage: "Approve deployment to PROD?"
@@ -229,33 +240,33 @@ pipeline:
                     timeout: 4h
 
               - step:
-                  name: Generate Manifest (Prod)
-                  identifier: gen_manifest_prod
+                  name: Generate Manifest Prod
+                  identifier: genManifestProd
                   type: ShellScript
                   spec:
                     shell: Bash
                     environmentVariables:
                       - name: DB_HOST
-                        type: Secret
-                        value: <+secrets.getValue("PROD_DB_HOST")>
+                        type: SecretRef
+                        value: <+secrets.getValue("prod_db_host")>
                       - name: DB_NAME
-                        type: Secret
-                        value: <+secrets.getValue("PROD_DB_NAME")>
+                        type: Text
+                        value: <+pipeline.variables.target_db>
                       - name: DB_USER
-                        type: Secret
-                        value: <+secrets.getValue("PROD_DB_USER")>
+                        type: SecretRef
+                        value: <+secrets.getValue("prod_db_user")>
                       - name: DB_PASS
-                        type: Secret
-                        value: <+secrets.getValue("PROD_DB_PASS")>
+                        type: SecretRef
+                        value: <+secrets.getValue("prod_db_pass")>
                     source:
                       type: Inline
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g"       ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$DB_NAME|g"     ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g"       ci_manifest.yaml
-                          sed -i "s|__DB_PASS__|$DB_PASS|g"       ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$DB_NAME|g" ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g" ci_manifest.yaml
                           if [ "${operation}" = "rollbackCount" ]; then
                             cmd="rollbackCount ${rollbackCount}"
                           else
@@ -264,8 +275,8 @@ pipeline:
                           sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g" ci_manifest.yaml
 
               - step:
-                  name: Deploy Liquibase Job (Prod)
-                  identifier: deploy_prod
+                  name: Deploy Job Prod
+                  identifier: deployJobProd
                   type: ShellScript
                   spec:
                     shell: Bash
@@ -279,12 +290,12 @@ pipeline:
                             -n liquibase-demo --timeout=300s
                           POD=$(kubectl get pods -n liquibase-demo \
                             -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
-                          echo "── Liquibase Job Logs (Prod) ──"
+                          echo "Liquibase Job Logs (Prod):"
                           kubectl logs $POD -n liquibase-demo
 
               - step:
-                  name: Cleanup Job (Prod)
-                  identifier: cleanup_prod
+                  name: Cleanup Job Prod
+                  identifier: cleanupJobProd
                   type: ShellScript
                   spec:
                     shell: Bash
