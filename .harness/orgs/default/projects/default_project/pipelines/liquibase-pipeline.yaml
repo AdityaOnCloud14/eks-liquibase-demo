@@ -1,8 +1,8 @@
 pipeline:
   name: Liquibase Multi-Environment Pipeline
   identifier: Liquibase_MultiEnvironment_Pipeline
-  projectIdentifier: YOUR_PROJECT_IDENTIFIER    # ← your project ID
-  orgIdentifier: YOUR_ORG_IDENTIFIER            # ← your org ID
+  projectIdentifier: default    # ← your project ID
+  orgIdentifier: default_project            # ← your org ID
   variables:
     - name: operation
       type: String
