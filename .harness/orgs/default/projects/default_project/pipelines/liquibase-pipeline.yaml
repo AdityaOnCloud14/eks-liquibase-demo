@@ -37,6 +37,7 @@ pipeline:
         identifier: Dev
         type: Deployment
         spec:
+          deploymentType: Kubernetes
           service:
             serviceRef: liquibase_service
           environment:
@@ -119,6 +120,7 @@ pipeline:
         identifier: Test
         type: Deployment
         spec:
+          deploymentType: Kubernetes
           service:
             serviceRef: liquibase_service
           environment:
@@ -211,6 +213,7 @@ pipeline:
         identifier: Prod
         type: Deployment
         spec:
+          deploymentType: Kubernetes
           service:
             serviceRef: liquibase_service
           environment:
