@@ -3,3 +3,22 @@ service:
   identifier: liquibase_service
   orgIdentifier: default
   projectIdentifier: default_project
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: liquibase_job_manifest
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: github_conenctor
+                  gitFetchType: Branch
+                  paths:
+                    - manifests/liquibase-job-template.yaml
+                  repoName: AdityaOnCloud14/eks-liquibase-demo
+                  branch: main
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+    type: Kubernetes
