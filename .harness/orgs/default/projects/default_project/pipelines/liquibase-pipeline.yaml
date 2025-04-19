@@ -1,294 +1,440 @@
 pipeline:
-  name: Liquibase Multi‑Env Pipeline
-  identifier: Liquibase_MultiEnv_Pipeline
-  orgIdentifier: default
+  name: Liquibase Deployment
+  identifier: liquibase_deployment
   projectIdentifier: default_project
-  description: |
-    Deploy or rollback Liquibase changes to Dev, Test and Prod EKS clusters,
-    using per‑environment Harness Secrets for DB credentials and an IRSA‑backed
-    EKS connector. Each stage generates a K8s Job from a shared template, runs it,
-    then always cleans up.
-
-  repo:
-    connectorRef: github_conenctor        # your GitHub connector
-    repositoryName: AdityaOnCloud14/eks-liquibase-demo
-    branch: main
-    repoRoot: .
-
+  orgIdentifier: default
+  tags: {}
+  allowStageExecutions: false
   variables:
-    - name: operation
-      type: String
-      default: update
-      allowedValues: [update, rollbackCount]
-
-    - name: rollbackCount
-      type: String
-      default: "1"
-
-    - name: target_db
-      type: String
-      default: demo_db
-
+  - name: operation
+    type: String
+    value: <+input>.default(update).allowedValues(update,rollbackCount)
+    description: Liquibase operation to perform (update or rollbackCount)
+    required: false
+  - name: rollbackCount
+    type: Number
+    value: <+input>.default(1)
+    description: Number of changesets to rollback
+    required: false
+  - name: target_db
+    type: String
+    value: <+input>.default(demo_db)
+    description: Target database name
+    required: false
   stages:
-    # ────────── DEV ──────────
-    - stage:
-        name: Dev
-        identifier: Dev
-        type: Deployment
-        spec:
-          deploymentType: Kubernetes
-
-          service:
-            serviceRef: liquibase_service
-
-          environment:
-            environmentRef: dev
-
-          infrastructure:
-            infrastructureDefinition:
-              connectorRef: eks_connector
-              namespace: liquibase-demo
-              type: KubernetesDirect
-
-          execution:
-            steps:
-              # 1) Generate the manifest
-              - step:
-                  name: GenManifestDev
-                  identifier: GenManifestDev
-                  type: ShellScript
+  - stage:
+      name: Dev
+      identifier: Dev
+      description: ''
+      type: Deployment
+      spec:
+        deploymentType: Kubernetes
+        service:
+          serviceRef: Liquibase
+        environment:
+          environmentRef: dev
+          deployToAll: false
+          infrastructureDefinitions:
+          - identifier: dev
+        execution:
+          steps:
+          - step:
+              type: ShellScript
+              name: Generate Liquibase Manifest
+              identifier: Generate_Liquibase_Manifest
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
                   spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      script: |
-                        cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                        sed -i "s|__DB_HOST__|<+secrets.getValue(\"DEV_DB_HOST\")>|g"     ci_manifest.yaml
-                        sed -i "s|__TARGET_DB__|${target_db}|g"                          ci_manifest.yaml
-                        sed -i "s|__DB_USER__|<+secrets.getValue(\"DEV_DB_USER\")>|g"     ci_manifest.yaml
-                        sed -i "s|__DB_PASS__|<+secrets.getValue(\"DEV_DB_PASS\")>|g"     ci_manifest.yaml
-                        if [ "${operation}" = "rollbackCount" ]; then
-                          cmd="rollbackCount ${rollbackCount}"
-                        else
-                          cmd="update"
-                        fi
-                        sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g"                          ci_manifest.yaml
-
-              # 2) Apply & wait for completion
-              - step:
-                  name: DeployDev
-                  identifier: DeployDev
-                  type: ShellScript
+                    script: |
+                      #!/bin/bash
+                      echo "Generating Kubernetes Job manifest for Dev using template..."
+                      git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git repo
+                      cd repo
+                      # Determine Liquibase command based on operation
+                      if [ "${OPERATION}" = "rollbackCount" ]; then
+                        LIQUIBASE_CMD="rollbackCount ${ROLLBACK_COUNT}"
+                      else
+                        LIQUIBASE_CMD="update"
+                      fi
+                      sed -e "s/__DB_HOST__/${DB_HOST}/g" \
+                          -e "s/__DB_USER__/${DB_USER}/g" \
+                          -e "s/__DB_PASS__/${DB_PASS}/g" \
+                          -e "s/__TARGET_DB__/${TARGET_DB}/g" \
+                          -e "s/__LIQUIBASE_COMMAND__/${LIQUIBASE_CMD}/g" \
+                          manifests/liquibase-job-template.yaml > ci_manifest.yaml
+                      echo "Manifest generated for Dev: ci_manifest.yaml"
+                environmentVariables:
+                - name: DB_HOST
+                  type: Secret
+                  value: <+secrets.getValue("DB_HOST")>
+                - name: DB_USER
+                  type: Secret
+                  value: <+secrets.getValue("DB_USER")>
+                - name: DB_PASS
+                  type: Secret
+                  value: <+secrets.getValue("DB_PASS")>
+                - name: TARGET_DB
+                  type: String
+                  value: <+pipeline.variables.target_db>
+                - name: OPERATION
+                  type: String
+                  value: <+pipeline.variables.operation>
+                - name: ROLLBACK_COUNT
+                  type: String
+                  value: <+pipeline.variables.rollbackCount>
+                outputVariables: []
+              timeout: 5m
+              failureStrategies:
+              - onFailure:
+                  errors:
+                  - AllErrors
+                  action:
+                    type: MarkAsFailure
+          - step:
+              type: ShellScript
+              name: Apply Liquibase Job
+              identifier: Apply_Liquibase_Job
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
                   spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      script: |
-                        aws eks update-kubeconfig \
-                          --name my-lb-initcluster \
-                          --region us-east-1
-                        kubectl apply -f ci_manifest.yaml -n liquibase-demo
-                        kubectl wait --for=condition=complete job/liquibase-job \
-                          -n liquibase-demo --timeout=300s
-                        POD=$(kubectl get pods -n liquibase-demo \
-                          -l job-name=liquibase-job \
-                          -o jsonpath="{.items[0].metadata.name}")
-                        echo "── Liquibase Job Logs (Dev) ──"
-                        kubectl logs "$POD" -n liquibase-demo
-
-              # 3) Cleanup (always)
-              - step:
-                  name: CleanupDev
-                  identifier: CleanupDev
-                  type: ShellScript
+                    script: |
+                      #!/bin/bash
+                      echo "Applying Liquibase Job manifest in Dev and waiting for completion..."
+                      kubectl apply -n <+infra.namespace> -f ci_manifest.yaml
+                      # Wait for the Job to complete (success or failure)
+                      kubectl wait -n <+infra.namespace> --for=condition=complete job/liquibase-job --timeout=300s || true
+                      echo "Job logs (Dev environment):"
+                      kubectl logs -n <+infra.namespace> job/liquibase-job
+                      status=$(kubectl get job/liquibase-job -n <+infra.namespace> -o jsonpath='{.status.succeeded}')
+                      if [ "$status" != "1" ]; then
+                        echo "Liquibase Job failed in Dev."
+                        exit 1
+                      fi
+                      echo "Liquibase Job completed successfully in Dev."
+                environmentVariables: []
+                outputVariables: []
+              timeout: 10m
+              failureStrategies:
+              - onFailure:
+                  errors:
+                  - AllErrors
+                  action:
+                    type: MarkAsFailure
+          - step:
+              type: ShellScript
+              name: Cleanup Liquibase Job
+              identifier: Cleanup_Liquibase_Job
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
                   spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      script: |
-                        kubectl delete job liquibase-job -n liquibase-demo || true
-
-          failureStrategies:
-            - onFailure:
-                action:
-                  type: Continue
-
-    # ────────── TEST ──────────
-    - stage:
-        name: Test
-        identifier: Test
-        type: Deployment
-        spec:
-          deploymentType: Kubernetes
-
-          service:
-            serviceRef: liquibase_service
-
-          environment:
-            environmentRef: test
-
-          infrastructure:
-            infrastructureDefinition:
-              connectorRef: eks_connector
-              namespace: liquibase-demo
-              type: KubernetesDirect
-
-          execution:
-            steps:
-              - step:
-                  name: ApproveTest
-                  identifier: ApproveTest
-                  type: HarnessApproval
+                    script: |
+                      #!/bin/bash
+                      echo "Cleaning up Liquibase Job in Dev..."
+                      kubectl delete -n <+infra.namespace> job/liquibase-job --ignore-not-found=true
+                      echo "Cleanup completed for Dev."
+                environmentVariables: []
+                outputVariables: []
+              timeout: 5m
+              failureStrategies:
+              - onFailure:
+                  errors:
+                  - AllErrors
+                  action:
+                    type: MarkAsFailure
+              when:
+                stageStatus: All
+  - stage:
+      name: Test
+      identifier: Test
+      description: ''
+      type: Deployment
+      spec:
+        deploymentType: Kubernetes
+        service:
+          serviceRef: Liquibase
+        environment:
+          environmentRef: test
+          deployToAll: false
+          infrastructureDefinitions:
+          - identifier: test
+        execution:
+          steps:
+          - step:
+              type: HarnessApproval
+              name: Approve Test DB Changes
+              identifier: Approve_Test
+              timeout: 1d
+              spec:
+                approvalMessage: Please review the following information and approve the Test database changes.
+                includePipelineExecutionHistory: true
+                approvers:
+                  userGroups:
+                  - _project_all_users
+                  minimumCount: 1
+                  disallowPipelineExecutor: false
+                isAutoRejectEnabled: false
+                approverInputs: []
+          - step:
+              type: ShellScript
+              name: Generate Liquibase Manifest
+              identifier: Generate_Liquibase_Manifest_Test
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
                   spec:
-                    approvalMessage: "Approve deployment to TEST?"
-                    approvers:
-                      userGroups: ["_account_all_users"]
-                    timeout: 2h
-
-              - step:
-                  name: GenManifestTest
-                  identifier: GenManifestTest
-                  type: ShellScript
+                    script: |
+                      #!/bin/bash
+                      echo "Generating Kubernetes Job manifest for Test using template..."
+                      git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git repo
+                      cd repo
+                      if [ "${OPERATION}" = "rollbackCount" ]; then
+                        LIQUIBASE_CMD="rollbackCount ${ROLLBACK_COUNT}"
+                      else
+                        LIQUIBASE_CMD="update"
+                      fi
+                      sed -e "s/__DB_HOST__/${DB_HOST}/g" \
+                          -e "s/__DB_USER__/${DB_USER}/g" \
+                          -e "s/__DB_PASS__/${DB_PASS}/g" \
+                          -e "s/__TARGET_DB__/${TARGET_DB}/g" \
+                          -e "s/__LIQUIBASE_COMMAND__/${LIQUIBASE_CMD}/g" \
+                          manifests/liquibase-job-template.yaml > ci_manifest.yaml
+                      echo "Manifest generated for Test: ci_manifest.yaml"
+                environmentVariables:
+                - name: DB_HOST
+                  type: Secret
+                  value: <+secrets.getValue("TEST_DB_HOST")>
+                - name: DB_USER
+                  type: Secret
+                  value: <+secrets.getValue("TEST_DB_USER")>
+                - name: DB_PASS
+                  type: Secret
+                  value: <+secrets.getValue("TEST_DB_PASS")>
+                - name: TARGET_DB
+                  type: String
+                  value: <+pipeline.variables.target_db>
+                - name: OPERATION
+                  type: String
+                  value: <+pipeline.variables.operation>
+                - name: ROLLBACK_COUNT
+                  type: String
+                  value: <+pipeline.variables.rollbackCount>
+                outputVariables: []
+              timeout: 5m
+              failureStrategies:
+              - onFailure:
+                  errors:
+                  - AllErrors
+                  action:
+                    type: MarkAsFailure
+          - step:
+              type: ShellScript
+              name: Apply Liquibase Job
+              identifier: Apply_Liquibase_Job_Test
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
                   spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      script: |
-                        cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                        sed -i "s|__DB_HOST__|<+secrets.getValue(\"TEST_DB_HOST\")>|g"   ci_manifest.yaml
-                        sed -i "s|__TARGET_DB__|${target_db}|g"                         ci_manifest.yaml
-                        sed -i "s|__DB_USER__|<+secrets.getValue(\"TEST_DB_USER\")>|g"   ci_manifest.yaml
-                        sed -i "s|__DB_PASS__|<+secrets.getValue(\"TEST_DB_PASS\")>|g"   ci_manifest.yaml
-                        if [ "${operation}" = "rollbackCount" ]; then
-                          cmd="rollbackCount ${rollbackCount}"
-                        else
-                          cmd="update"
-                        fi
-                        sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g"                          ci_manifest.yaml
-
-              - step:
-                  name: DeployTest
-                  identifier: DeployTest
-                  type: ShellScript
+                    script: |
+                      #!/bin/bash
+                      echo "Applying Liquibase Job manifest in Test and waiting for completion..."
+                      kubectl apply -n <+infra.namespace> -f ci_manifest.yaml
+                      kubectl wait -n <+infra.namespace> --for=condition=complete job/liquibase-job --timeout=300s || true
+                      echo "Job logs (Test environment):"
+                      kubectl logs -n <+infra.namespace> job/liquibase-job
+                      status=$(kubectl get job/liquibase-job -n <+infra.namespace> -o jsonpath='{.status.succeeded}')
+                      if [ "$status" != "1" ]; then
+                        echo "Liquibase Job failed in Test."
+                        exit 1
+                      fi
+                      echo "Liquibase Job completed successfully in Test."
+                environmentVariables: []
+                outputVariables: []
+              timeout: 10m
+              failureStrategies:
+              - onFailure:
+                  errors:
+                  - AllErrors
+                  action:
+                    type: MarkAsFailure
+          - step:
+              type: ShellScript
+              name: Cleanup Liquibase Job
+              identifier: Cleanup_Liquibase_Job_Test
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
                   spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      script: |
-                        aws eks update-kubeconfig \
-                          --name my-lb-initcluster \
-                          --region us-east-1
-                        kubectl apply -f ci_manifest.yaml -n liquibase-demo
-                        kubectl wait --for=condition=complete job/liquibase-job \
-                          -n liquibase-demo --timeout=300s
-                        POD=$(kubectl get pods -n liquibase-demo \
-                          -l job-name=liquibase-job \
-                          -o jsonpath="{.items[0].metadata.name}")
-                        echo "── Liquibase Job Logs (Test) ──"
-                        kubectl logs "$POD" -n liquibase-demo
-
-              - step:
-                  name: CleanupTest
-                  identifier: CleanupTest
-                  type: ShellScript
+                    script: |
+                      #!/bin/bash
+                      echo "Cleaning up Liquibase Job in Test..."
+                      kubectl delete -n <+infra.namespace> job/liquibase-job --ignore-not-found=true
+                      echo "Cleanup completed for Test."
+                environmentVariables: []
+                outputVariables: []
+              timeout: 5m
+              failureStrategies:
+              - onFailure:
+                  errors:
+                  - AllErrors
+                  action:
+                    type: MarkAsFailure
+              when:
+                stageStatus: All
+  - stage:
+      name: Prod
+      identifier: Prod
+      description: ''
+      type: Deployment
+      spec:
+        deploymentType: Kubernetes
+        service:
+          serviceRef: Liquibase
+        environment:
+          environmentRef: prod
+          deployToAll: false
+          infrastructureDefinitions:
+          - identifier: prod
+        execution:
+          steps:
+          - step:
+              type: HarnessApproval
+              name: Approve Prod DB Changes
+              identifier: Approve_Prod
+              timeout: 1d
+              spec:
+                approvalMessage: Please review the following information and approve the Prod database changes.
+                includePipelineExecutionHistory: true
+                approvers:
+                  userGroups:
+                  - _project_all_users
+                  minimumCount: 1
+                  disallowPipelineExecutor: false
+                isAutoRejectEnabled: false
+                approverInputs: []
+          - step:
+              type: ShellScript
+              name: Generate Liquibase Manifest
+              identifier: Generate_Liquibase_Manifest_Prod
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
                   spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      script: |
-                        kubectl delete job liquibase-job -n liquibase-demo || true
-
-          failureStrategies:
-            - onFailure:
-                action:
-                  type: Continue
-
-    # ────────── PROD ──────────
-    - stage:
-        name: Prod
-        identifier: Prod
-        type: Deployment
-        spec:
-          deploymentType: Kubernetes
-
-          service:
-            serviceRef: liquibase_service
-
-          environment:
-            environmentRef: prod
-
-          infrastructure:
-            infrastructureDefinition:
-              connectorRef: eks_connector
-              namespace: liquibase-demo
-              type: KubernetesDirect
-
-          execution:
-            steps:
-              - step:
-                  name: ApproveProd
-                  identifier: ApproveProd
-                  type: HarnessApproval
+                    script: |
+                      #!/bin/bash
+                      echo "Generating Kubernetes Job manifest for Prod using template..."
+                      git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git repo
+                      cd repo
+                      if [ "${OPERATION}" = "rollbackCount" ]; then
+                        LIQUIBASE_CMD="rollbackCount ${ROLLBACK_COUNT}"
+                      else
+                        LIQUIBASE_CMD="update"
+                      fi
+                      sed -e "s/__DB_HOST__/${DB_HOST}/g" \
+                          -e "s/__DB_USER__/${DB_USER}/g" \
+                          -e "s/__DB_PASS__/${DB_PASS}/g" \
+                          -e "s/__TARGET_DB__/${TARGET_DB}/g" \
+                          -e "s/__LIQUIBASE_COMMAND__/${LIQUIBASE_CMD}/g" \
+                          manifests/liquibase-job-template.yaml > ci_manifest.yaml
+                      echo "Manifest generated for Prod: ci_manifest.yaml"
+                environmentVariables:
+                - name: DB_HOST
+                  type: Secret
+                  value: <+secrets.getValue("PROD_DB_HOST")>
+                - name: DB_USER
+                  type: Secret
+                  value: <+secrets.getValue("PROD_DB_USER")>
+                - name: DB_PASS
+                  type: Secret
+                  value: <+secrets.getValue("PROD_DB_PASS")>
+                - name: TARGET_DB
+                  type: String
+                  value: <+pipeline.variables.target_db>
+                - name: OPERATION
+                  type: String
+                  value: <+pipeline.variables.operation>
+                - name: ROLLBACK_COUNT
+                  type: String
+                  value: <+pipeline.variables.rollbackCount>
+                outputVariables: []
+              timeout: 5m
+              failureStrategies:
+              - onFailure:
+                  errors:
+                  - AllErrors
+                  action:
+                    type: MarkAsFailure
+          - step:
+              type: ShellScript
+              name: Apply Liquibase Job
+              identifier: Apply_Liquibase_Job_Prod
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
                   spec:
-                    approvalMessage: "Approve deployment to PROD?"
-                    approvers:
-                      userGroups: ["_account_all_users"]
-                    timeout: 4h
-
-              - step:
-                  name: GenManifestProd
-                  identifier: GenManifestProd
-                  type: ShellScript
+                    script: |
+                      #!/bin/bash
+                      echo "Applying Liquibase Job manifest in Prod and waiting for completion..."
+                      kubectl apply -n <+infra.namespace> -f ci_manifest.yaml
+                      kubectl wait -n <+infra.namespace> --for=condition=complete job/liquibase-job --timeout=300s || true
+                      echo "Job logs (Prod environment):"
+                      kubectl logs -n <+infra.namespace> job/liquibase-job
+                      status=$(kubectl get job/liquibase-job -n <+infra.namespace> -o jsonpath='{.status.succeeded}')
+                      if [ "$status" != "1" ]; then
+                        echo "Liquibase Job failed in Prod."
+                        exit 1
+                      fi
+                      echo "Liquibase Job completed successfully in Prod."
+                environmentVariables: []
+                outputVariables: []
+              timeout: 10m
+              failureStrategies:
+              - onFailure:
+                  errors:
+                  - AllErrors
+                  action:
+                    type: MarkAsFailure
+          - step:
+              type: ShellScript
+              name: Cleanup Liquibase Job
+              identifier: Cleanup_Liquibase_Job_Prod
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
                   spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      script: |
-                        cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                        sed -i "s|__DB_HOST__|<+secrets.getValue(\"PROD_DB_HOST\")>|g"  ci_manifest.yaml
-                        sed -i "s|__TARGET_DB__|${target_db}|g"                        ci_manifest.yaml
-                        sed -i "s|__DB_USER__|<+secrets.getValue(\"PROD_DB_USER\")>|g"  ci_manifest.yaml
-                        sed -i "s|__DB_PASS__|<+secrets.getValue(\"PROD_DB_PASS\")>|g"  ci_manifest.yaml
-                        if [ "${operation}" = "rollbackCount" ]; then
-                          cmd="rollbackCount ${rollbackCount}"
-                        else
-                          cmd="update"
-                        fi
-                        sed -i "s|__LIQUIBASE_COMMAND__|$cmd|g"                          ci_manifest.yaml
-
-              - step:
-                  name: DeployProd
-                  identifier: DeployProd
-                  type: ShellScript
-                  spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      script: |
-                        aws eks update-kubeconfig \
-                          --name my-lb-initcluster \
-                          --region us-east-1
-                        kubectl apply -f ci_manifest.yaml -n liquibase-demo
-                        kubectl wait --for=condition=complete job/liquibase-job \
-                          -n liquibase-demo --timeout=300s
-                        POD=$(kubectl get pods -n liquibase-demo \
-                          -l job-name=liquibase-job \
-                          -o jsonpath="{.items[0].metadata.name}")
-                        echo "── Liquibase Job Logs (Prod) ──"
-                        kubectl logs "$POD" -n liquibase-demo
-
-              - step:
-                  name: CleanupProd
-                  identifier: CleanupProd
-                  type: ShellScript
-                  spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      script: |
-                        kubectl delete job liquibase-job -n liquibase-demo || true
-
-          failureStrategies:
-            - onFailure:
-                action:
-                  type: Continue
+                    script: |
+                      #!/bin/bash
+                      echo "Cleaning up Liquibase Job in Prod..."
+                      kubectl delete -n <+infra.namespace> job/liquibase-job --ignore-not-found=true
+                      echo "Cleanup completed for Prod."
+                environmentVariables: []
+                outputVariables: []
+              timeout: 5m
+              failureStrategies:
+              - onFailure:
+                  errors:
+                  - AllErrors
+                  action:
+                    type: MarkAsFailure
+              when:
+                stageStatus: All
