@@ -29,7 +29,7 @@ pipeline:
             environmentRef: dev                            # ← your Dev environment
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: dev-infra                      # ← your Dev infra def’n
+              - identifier: dev                      # ← your Dev infra def’n
           execution:
             steps:
 
@@ -139,7 +139,7 @@ pipeline:
             environmentRef: test
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: test-infra
+              - identifier: test
           execution:
             steps:
 
@@ -255,7 +255,7 @@ pipeline:
             environmentRef: prod
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: prod-infra
+              - identifier: prod
           execution:
             steps:
 
