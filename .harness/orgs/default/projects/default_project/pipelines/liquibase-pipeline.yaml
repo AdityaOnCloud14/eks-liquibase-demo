@@ -10,7 +10,7 @@ pipeline:
     a shared template, runs it, then always cleans up.
 
   repo:
-    connectorRef: github_conenctor     # your Harness GitHub connector
+    connectorRef: github_conenctor         # your Harness GitHub connector
     repositoryName: AdityaOnCloud14/eks-liquibase-demo
     branch: main
     repoRoot: .
