@@ -62,7 +62,7 @@ pipeline:
             environmentRef: dev
             deployToAll: false
             infrastructure:
-              identifier: eks_connector
+              identifier: eks_infra_dev
               type: KubernetesDirect
           execution:
             steps:
@@ -268,7 +268,7 @@ pipeline:
             environmentRef: prod
             deployToAll: false
             infrastructure:
-              identifier: eks_connector
+              identifier: eks_infra_prod
               type: KubernetesDirect
           execution:
             steps:
