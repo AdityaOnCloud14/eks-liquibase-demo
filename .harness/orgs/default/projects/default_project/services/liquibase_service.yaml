@@ -13,7 +13,7 @@ service:
               store:
                 type: Github
                 spec:
-                  connectorRef: github_conenctor
+                  connectorRef: github_connector
                   gitFetchType: Branch
                   paths:
                     - manifests/liquibase-job-template.yaml
