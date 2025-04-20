@@ -5,7 +5,7 @@ pipeline:
   projectIdentifier: default_project
 
   repo:
-    connectorRef: github_conenctor
+    connectorRef: github_connector
     repositoryName: AdityaOnCloud14/eks-liquibase-demo
     branch: main
     repoRoot: .
@@ -52,7 +52,7 @@ pipeline:
                           store:
                             type: Git
                             spec:
-                              connectorRef: github_conenctor
+                              connectorRef: github_connector
                               gitFetchType: Branch
                               branch: "<+pipeline.variables.GitBranch>"
                               paths:
@@ -155,7 +155,7 @@ pipeline:
                           store:
                             type: Git
                             spec:
-                              connectorRef: github_conenctor
+                              connectorRef: github_connector
                               gitFetchType: Branch
                               branch: "<+pipeline.variables.GitBranch>"
                               paths:
@@ -258,7 +258,7 @@ pipeline:
                           store:
                             type: Git
                             spec:
-                              connectorRef: github_conenctor
+                              connectorRef: github_connector
                               gitFetchType: Branch
                               branch: "<+pipeline.variables.GitBranch>"
                               paths:
