@@ -4,7 +4,6 @@ pipeline:
   orgIdentifier: default
   projectIdentifier: default_project
 
-  # where to fetch this pipeline YAML
   repo:
     connectorRef: github_conenctor
     repositoryName: AdityaOnCloud14/eks-liquibase-demo
@@ -14,7 +13,7 @@ pipeline:
   variables:
     - name: OperationType
       type: String
-      description: Liquibase operation
+      description: Liquibase operation (“update” or “rollback”)
       default: update
       allowedValues: [ update, rollback ]
     - name: RollbackCount
@@ -23,17 +22,18 @@ pipeline:
       default: 1
     - name: GitBranch
       type: String
-      description: Branch containing the manifest template
+      description: Branch to pull the template from
       default: main
 
   stages:
+
     # ─────────── DEV ───────────
     - stage:
         name: DevDatabaseMigration
         identifier: Dev
         type: Deployment
 
-        # stop immediately on any error
+        # immediately abort the pipeline if anything in this stage fails
         failureStrategies:
           - onFailure:
               errors: [ AllErrors ]
@@ -72,7 +72,8 @@ pipeline:
 
           execution:
             steps:
-              # 1) render the Job
+
+              # 1) Generate a rendered Job manifest
               - step:
                   name: GenerateManifestDev
                   identifier: GenerateManifestDev
@@ -101,11 +102,11 @@ pipeline:
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"        ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"        ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"      ci_manifest.yaml
                           if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
                             sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
                           else
@@ -114,7 +115,7 @@ pipeline:
                           NAME=$(yq e '.metadata.name' ci_manifest.yaml)
                           echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
 
-              # 2) apply it
+              # 2) Apply it (Harness will wait for Job completion)
               - step:
                   name: ApplyJobDev
                   identifier: ApplyJobDev
@@ -125,7 +126,7 @@ pipeline:
                     skipDryRun: false
                     skipSteadyStateCheck: false
 
-              # 3) always clean up
+              # 3) Always clean up the Job (on success or failure)
               - step:
                   name: CleanupJobDev
                   identifier: CleanupJobDev
@@ -133,11 +134,8 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    deleteResources:
-                      type: DeleteResourceName
-                      spec:
-                        resources:
-                          - "Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
+                    resourceNames:
+                      - "Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
 
@@ -186,6 +184,7 @@ pipeline:
 
           execution:
             steps:
+
               - step:
                   name: GenerateManifestTest
                   identifier: GenerateManifestTest
@@ -214,11 +213,11 @@ pipeline:
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"        ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"        ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"      ci_manifest.yaml
                           if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
                             sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
                           else
@@ -244,11 +243,8 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    deleteResources:
-                      type: DeleteResourceName
-                      spec:
-                        resources:
-                          - "Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
+                    resourceNames:
+                      - "Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
 
@@ -297,6 +293,7 @@ pipeline:
 
           execution:
             steps:
+
               - step:
                   name: GenerateManifestProd
                   identifier: GenerateManifestProd
@@ -325,11 +322,11 @@ pipeline:
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"        ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"        ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"      ci_manifest.yaml
                           if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
                             sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
                           else
@@ -355,10 +352,7 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    deleteResources:
-                      type: DeleteResourceName
-                      spec:
-                        resources:
-                          - "Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
+                    resourceNames:
+                      - "Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
