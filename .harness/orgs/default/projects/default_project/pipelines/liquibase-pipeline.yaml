@@ -111,18 +111,6 @@ pipeline:
                         resources:
                           - Job/<+step.generate_manifest_dev.output.LIQUIBASE_JOB_NAME>
 
-            rollbackSteps:
-              - step:
-                  name: Rollback Cleanup Dev
-                  identifier: rollback_cleanup_dev
-                  type: K8sDelete
-                  spec:
-                    deleteResources:
-                      type: DeleteResourceName
-                      spec:
-                        resources:
-                          - Job/<+step.generate_manifest_dev.output.LIQUIBASE_JOB_NAME>
-
           failureStrategies:
             - onFailure:
                 errors:
@@ -221,19 +209,7 @@ pipeline:
                       spec:
                         resources:
                           - Job/<+step.generate_manifest_test.output.LIQUIBASE_JOB_NAME>
-
-            rollbackSteps:
-              - step:
-                  name: Rollback Cleanup Test
-                  identifier: rollback_cleanup_test
-                  type: K8sDelete
-                  spec:
-                    deleteResources:
-                      type: DeleteResourceName
-                      spec:
-                        resources:
-                          - Job/<+step.generate_manifest_test.output.LIQUIBASE_JOB_NAME>
-
+                          
           failureStrategies:
             - onFailure:
                 errors:
@@ -332,19 +308,7 @@ pipeline:
                       spec:
                         resources:
                           - Job/<+step.generate_manifest_prod.output.LIQUIBASE_JOB_NAME>
-
-            rollbackSteps:
-              - step:
-                  name: Rollback Cleanup Prod
-                  identifier: rollback_cleanup_prod
-                  type: K8sDelete
-                  spec:
-                    deleteResources:
-                      type: DeleteResourceName
-                      spec:
-                        resources:
-                          - Job/<+step.generate_manifest_prod.output.LIQUIBASE_JOB_NAME>
-
+                          
           failureStrategies:
             - onFailure:
                 errors:
