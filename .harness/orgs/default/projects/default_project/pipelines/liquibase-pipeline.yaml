@@ -165,7 +165,7 @@ pipeline:
             environmentRef: test
             deployToAll: false
             infrastructure:
-              identifier: eks_connector
+              identifier: eks_infra_test
               type: KubernetesDirect
           execution:
             steps:
