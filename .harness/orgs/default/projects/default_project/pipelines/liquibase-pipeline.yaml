@@ -77,7 +77,7 @@ pipeline:
                     outputVariables:
                       - name: LIQUIBASE_JOB_NAME
                     command: |
-                      cp liquibase/liquibase-job-template.yaml ci_manifest.yaml
+                      cp manifests/liquibase-job-template.yaml ci_manifest.yaml
                       sed -i "s|__DB_HOST__|${DB_HOST}|g" ci_manifest.yaml
                       sed -i "s|__DB_USER__|${DB_USER}|g" ci_manifest.yaml
                       sed -i "s|__DB_PASSWORD__|${DB_PASSWORD}|g" ci_manifest.yaml
@@ -176,7 +176,7 @@ pipeline:
                     outputVariables:
                       - name: LIQUIBASE_JOB_NAME
                     command: |
-                      cp liquibase/liquibase-job-template.yaml ci_manifest.yaml
+                      cp manifests/liquibase-job-template.yaml ci_manifest.yaml
                       sed -i "s|__DB_HOST__|${DB_HOST}|g" ci_manifest.yaml
                       sed -i "s|__DB_USER__|${DB_USER}|g" ci_manifest.yaml
                       sed -i "s|__DB_PASSWORD__|${DB_PASSWORD}|g" ci_manifest.yaml
@@ -209,7 +209,7 @@ pipeline:
                       spec:
                         resources:
                           - Job/<+step.generate_manifest_test.output.LIQUIBASE_JOB_NAME>
-                          
+
           failureStrategies:
             - onFailure:
                 errors:
@@ -241,7 +241,7 @@ pipeline:
                               gitFetchType: Branch
                               branch: <+pipeline.variables.GitBranch>
                               paths:
-                                - mainfests/liquibase-job-template.yaml
+                                - manifests/liquibase-job-template.yaml
                           skipResourceVersioning: true
           environment:
             environmentRef: prod
@@ -275,7 +275,7 @@ pipeline:
                     outputVariables:
                       - name: LIQUIBASE_JOB_NAME
                     command: |
-                      cp liquibase/liquibase-job-template.yaml ci_manifest.yaml
+                      cp manifests/liquibase-job-template.yaml ci_manifest.yaml
                       sed -i "s|__DB_HOST__|${DB_HOST}|g" ci_manifest.yaml
                       sed -i "s|__DB_USER__|${DB_USER}|g" ci_manifest.yaml
                       sed -i "s|__DB_PASSWORD__|${DB_PASSWORD}|g" ci_manifest.yaml
@@ -308,7 +308,7 @@ pipeline:
                       spec:
                         resources:
                           - Job/<+step.generate_manifest_prod.output.LIQUIBASE_JOB_NAME>
-                          
+
           failureStrategies:
             - onFailure:
                 errors:
