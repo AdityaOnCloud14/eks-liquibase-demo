@@ -120,7 +120,10 @@ pipeline:
                 action:
                   type: Abort
 
-    # --- STAGE: TEST ---
+    # ----------------------------------------
+    # Copy-paste the same logic for Test and Prod
+    # ----------------------------------------
+
     - stage:
         name: Test
         identifier: test
@@ -222,7 +225,6 @@ pipeline:
                 action:
                   type: Abort
 
-    # --- STAGE: PROD ---
     - stage:
         name: Prod
         identifier: prod
