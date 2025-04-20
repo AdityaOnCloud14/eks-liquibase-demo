@@ -64,6 +64,10 @@ pipeline:
             infrastructure:
               identifier: eks_infra_dev
               type: KubernetesDirect
+              spec:  # Add this missing block
+                connectorRef: eks_connector
+                namespace: liquibase-demo  # Replace with your target namespace
+                releaseName: liquibase-job
           execution:
             steps:
               - step:
@@ -167,6 +171,10 @@ pipeline:
             infrastructure:
               identifier: eks_infra_test
               type: KubernetesDirect
+              spec:  # Add this missing block
+                connectorRef: eks_connector
+                namespace: liquibase-demo  # Replace with your target namespace
+                releaseName: liquibase-job
           execution:
             steps:
               - step:
@@ -270,6 +278,10 @@ pipeline:
             infrastructure:
               identifier: eks_infra_prod
               type: KubernetesDirect
+              spec:  # Add this missing block
+                connectorRef: eks_connector
+                namespace: liquibase-demo  # Replace with your target namespace
+                releaseName: liquibase-job
           execution:
             steps:
               - step:
