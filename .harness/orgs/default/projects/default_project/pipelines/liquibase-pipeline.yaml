@@ -26,23 +26,18 @@ pipeline:
       default: main
 
   stages:
-
     # ─────────── DEV ───────────
     - stage:
         name: DevDatabaseMigration
         identifier: Dev
         type: Deployment
-
-        # immediately abort the pipeline if anything in this stage fails
         failureStrategies:
           - onFailure:
               errors: [ AllErrors ]
               action:
                 type: Abort
-
         spec:
           deploymentType: Kubernetes
-
           service:
             serviceRef: liquibase_service
             serviceInputs:
@@ -63,17 +58,14 @@ pipeline:
                               paths:
                                 - manifests/liquibase-job-template.yaml
                           skipResourceVersioning: true
-
           environment:
             environmentRef: dev
             deployToAll: false
-            infrastructureDefinitions:
-              - identifier: eks_connector
-
+            infrastructure:
+              identifier: eks_connector
+              type: KubernetesDirect
           execution:
             steps:
-
-              # 1) Generate a rendered Job manifest
               - step:
                   name: GenerateManifestDev
                   identifier: GenerateManifestDev
@@ -114,8 +106,6 @@ pipeline:
                           fi
                           NAME=$(yq e '.metadata.name' ci_manifest.yaml)
                           echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
-
-              # 2) Apply it (Harness will wait for Job completion)
               - step:
                   name: ApplyJobDev
                   identifier: ApplyJobDev
@@ -125,8 +115,6 @@ pipeline:
                       - ci_manifest.yaml
                     skipDryRun: false
                     skipSteadyStateCheck: false
-
-              # 3) Always clean up the Job (on success or failure)
               - step:
                   name: CleanupJobDev
                   identifier: CleanupJobDev
@@ -134,27 +122,25 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    resourceNames:
-                      - "Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
+                    deleteResources:
+                      names:
+                        - "Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
-
+                    timeout: 10m
 
     # ─────────── TEST ───────────
     - stage:
         name: TestDatabaseMigration
         identifier: Test
         type: Deployment
-
         failureStrategies:
           - onFailure:
               errors: [ AllErrors ]
               action:
                 type: Abort
-
         spec:
           deploymentType: Kubernetes
-
           service:
             serviceRef: liquibase_service
             serviceInputs:
@@ -175,16 +161,14 @@ pipeline:
                               paths:
                                 - manifests/liquibase-job-template.yaml
                           skipResourceVersioning: true
-
           environment:
             environmentRef: test
             deployToAll: false
-            infrastructureDefinitions:
-              - identifier: eks_connector
-
+            infrastructure:
+              identifier: eks_connector
+              type: KubernetesDirect
           execution:
             steps:
-
               - step:
                   name: GenerateManifestTest
                   identifier: GenerateManifestTest
@@ -225,7 +209,6 @@ pipeline:
                           fi
                           NAME=$(yq e '.metadata.name' ci_manifest.yaml)
                           echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
-
               - step:
                   name: ApplyJobTest
                   identifier: ApplyJobTest
@@ -235,7 +218,6 @@ pipeline:
                       - ci_manifest.yaml
                     skipDryRun: false
                     skipSteadyStateCheck: false
-
               - step:
                   name: CleanupJobTest
                   identifier: CleanupJobTest
@@ -243,27 +225,25 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    resourceNames:
-                      - "Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
+                    deleteResources:
+                      names:
+                        - "Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
-
+                    timeout: 10m
 
     # ─────────── PROD ───────────
     - stage:
         name: ProdDatabaseMigration
         identifier: Prod
         type: Deployment
-
         failureStrategies:
           - onFailure:
               errors: [ AllErrors ]
               action:
                 type: Abort
-
         spec:
           deploymentType: Kubernetes
-
           service:
             serviceRef: liquibase_service
             serviceInputs:
@@ -284,16 +264,14 @@ pipeline:
                               paths:
                                 - manifests/liquibase-job-template.yaml
                           skipResourceVersioning: true
-
           environment:
             environmentRef: prod
             deployToAll: false
-            infrastructureDefinitions:
-              - identifier: eks_connector
-
+            infrastructure:
+              identifier: eks_connector
+              type: KubernetesDirect
           execution:
             steps:
-
               - step:
                   name: GenerateManifestProd
                   identifier: GenerateManifestProd
@@ -334,7 +312,6 @@ pipeline:
                           fi
                           NAME=$(yq e '.metadata.name' ci_manifest.yaml)
                           echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
-
               - step:
                   name: ApplyJobProd
                   identifier: ApplyJobProd
@@ -344,7 +321,6 @@ pipeline:
                       - ci_manifest.yaml
                     skipDryRun: false
                     skipSteadyStateCheck: false
-
               - step:
                   name: CleanupJobProd
                   identifier: CleanupJobProd
@@ -352,7 +328,9 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    resourceNames:
-                      - "Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
+                    deleteResources:
+                      names:
+                        - "Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
+                    timeout: 10m
