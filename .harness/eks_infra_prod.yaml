@@ -1,0 +1,13 @@
+infrastructureDefinition:
+  name: eks_infra_prod
+  identifier: eks_infra_prod
+  orgIdentifier: default
+  projectIdentifier: default_project
+  environmentRef: prod
+  deploymentType: Kubernetes
+  type: KubernetesDirect
+  spec:
+    connectorRef: eks_connector
+    namespace: liquibase-demo
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
