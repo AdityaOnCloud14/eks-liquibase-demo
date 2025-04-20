@@ -7,7 +7,7 @@ pipeline:
   variables:
     - name: OperationType
       type: String
-      description: Liquibase operation ("update" or "rollback")
+      description: Liquibase operation to perform
       default: update
       allowedValues:
         - update
@@ -18,18 +18,19 @@ pipeline:
       default: 1
     - name: GitBranch
       type: String
-      description: Git branch where the template lives
+      description: Branch containing your template
       default: main
 
   stages:
 
-    # ────────── DEV ──────────
+    # ─────────────────────── DEV ───────────────────────
     - stage:
-        name: Dev
+        name: Dev Database Migration
         identifier: dev
         type: Deployment
         spec:
           deploymentType: Kubernetes
+
           service:
             serviceRef: liquibase_service
             serviceInputs:
@@ -38,7 +39,7 @@ pipeline:
                 spec:
                   manifests:
                     - manifest:
-                        identifier: JobTemplate
+                        identifier: LiquibaseJobTemplate
                         type: KubernetesManifest
                         spec:
                           store:
@@ -48,7 +49,7 @@ pipeline:
                               gitFetchType: Branch
                               branch: "<+pipeline.variables.GitBranch>"
                               paths:
-                                - "manifests/liquibase-job-template.yaml"
+                                - manifests/liquibase‑job‑template.yaml
                           skipResourceVersioning: true
 
           environment:
@@ -59,10 +60,9 @@ pipeline:
 
           execution:
             steps:
-
-              # 1. Render the Job manifest
+              # 1. render the Job manifest
               - step:
-                  name: generate_manifest_dev
+                  name: Generate Manifest (Dev)
                   identifier: generate_manifest_dev
                   type: ShellScript
                   spec:
@@ -84,37 +84,34 @@ pipeline:
                       - name: GIT_BRANCH
                         type: String
                         value: "<+pipeline.variables.GitBranch>"
-                    outputVariables:
-                      - name: JOB_NAME
-                    command: |
-                      cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                      sed -i "s|__DB_HOST__|$DB_HOST|g"          ci_manifest.yaml
-                      sed -i "s|__DB_USER__|$DB_USER|g"          ci_manifest.yaml
-                      sed -i "s|__DB_PASSWORD__|$DB_PASS|g"       ci_manifest.yaml
-                      sed -i "s|__TARGET_DB__|$TARGET_DB|g"       ci_manifest.yaml
-                      sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"     ci_manifest.yaml
-                      if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
-                        sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
-                      else
-                        sed -i "s|__LIQUIBASE_COMMAND__|update|g"   ci_manifest.yaml
-                      fi
-                      JOB_NAME=$(yq e '.metadata.name' ci_manifest.yaml)
-                      echo "JOB_NAME=$JOB_NAME" > job_name.out
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          cp manifests/liquibase‑job‑template.yaml ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"      ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"      ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"   ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"   ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
+                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
+                          else
+                            sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
+                          fi
 
-              # 2. Apply & wait
+              # 2. apply it
               - step:
-                  name: apply_job_dev
+                  name: Apply Liquibase Job (Dev)
                   identifier: apply_job_dev
                   type: K8sApply
                   spec:
                     filePaths:
-                      - "ci_manifest.yaml"
-                    skipDryRun: false
-                    skipSteadyStateCheck: false
+                      - ci_manifest.yaml
 
-              # 3. Cleanup on success or failure
+              # 3. always delete it (success or failure)
               - step:
-                  name: delete_job_dev
+                  name: Cleanup Liquibase Job (Dev)
                   identifier: delete_job_dev
                   type: K8sDelete
                   when:
@@ -124,7 +121,7 @@ pipeline:
                       type: ResourceName
                       spec:
                         resources:
-                          - "Job/<+loadFile(\"job_name.out\").JOB_NAME>"
+                          - "Job/liquibase-<+pipeline.variables.GitBranch>"
 
           failureStrategies:
             - onFailure:
@@ -134,13 +131,14 @@ pipeline:
                   type: Abort
 
 
-    # ────────── TEST ──────────
+    # ─────────────────────── TEST ──────────────────────
     - stage:
-        name: Test
+        name: Test Database Migration
         identifier: test
         type: Deployment
         spec:
           deploymentType: Kubernetes
+
           service:
             serviceRef: liquibase_service
             serviceInputs:
@@ -149,7 +147,7 @@ pipeline:
                 spec:
                   manifests:
                     - manifest:
-                        identifier: JobTemplate
+                        identifier: LiquibaseJobTemplate
                         type: KubernetesManifest
                         spec:
                           store:
@@ -159,7 +157,7 @@ pipeline:
                               gitFetchType: Branch
                               branch: "<+pipeline.variables.GitBranch>"
                               paths:
-                                - "manifests/liquibase-job-template.yaml"
+                                - manifests/liquibase‑job‑template.yaml
                           skipResourceVersioning: true
 
           environment:
@@ -170,9 +168,8 @@ pipeline:
 
           execution:
             steps:
-
               - step:
-                  name: generate_manifest_test
+                  name: Generate Manifest (Test)
                   identifier: generate_manifest_test
                   type: ShellScript
                   spec:
@@ -194,33 +191,32 @@ pipeline:
                       - name: GIT_BRANCH
                         type: String
                         value: "<+pipeline.variables.GitBranch>"
-                    outputVariables:
-                      - name: JOB_NAME
-                    command: |
-                      cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                      sed -i "s|__DB_HOST__|$DB_HOST|g"          ci_manifest.yaml
-                      sed -i "s|__DB_USER__|$DB_USER|g"          ci_manifest.yaml
-                      sed -i "s|__DB_PASSWORD__|$DB_PASS|g"       ci_manifest.yaml
-                      sed -i "s|__TARGET_DB__|$TARGET_DB|g"       ci_manifest.yaml
-                      sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"     ci_manifest.yaml
-                      if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
-                        sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
-                      else
-                        sed -i "s|__LIQUIBASE_COMMAND__|update|g"   ci_manifest.yaml
-                      fi
-                      JOB_NAME=$(yq e '.metadata.name' ci_manifest.yaml)
-                      echo "JOB_NAME=$JOB_NAME" > job_name_test.out
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          cp manifests/liquibase‑job‑template.yaml ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"      ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"      ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"   ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"   ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
+                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
+                          else
+                            sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
+                          fi
 
               - step:
-                  name: apply_job_test
+                  name: Apply Liquibase Job (Test)
                   identifier: apply_job_test
                   type: K8sApply
                   spec:
                     filePaths:
-                      - "ci_manifest.yaml"
+                      - ci_manifest.yaml
 
               - step:
-                  name: delete_job_test
+                  name: Cleanup Liquibase Job (Test)
                   identifier: delete_job_test
                   type: K8sDelete
                   when:
@@ -230,7 +226,7 @@ pipeline:
                       type: ResourceName
                       spec:
                         resources:
-                          - "Job/<+loadFile(\"job_name_test.out\").JOB_NAME>"
+                          - "Job/liquibase-<+pipeline.variables.GitBranch>"
 
           failureStrategies:
             - onFailure:
@@ -240,13 +236,14 @@ pipeline:
                   type: Abort
 
 
-    # ────────── PROD ──────────
+    # ─────────────────────── PROD ──────────────────────
     - stage:
-        name: Prod
+        name: Prod Database Migration
         identifier: prod
         type: Deployment
         spec:
           deploymentType: Kubernetes
+
           service:
             serviceRef: liquibase_service
             serviceInputs:
@@ -255,7 +252,7 @@ pipeline:
                 spec:
                   manifests:
                     - manifest:
-                        identifier: JobTemplate
+                        identifier: LiquibaseJobTemplate
                         type: KubernetesManifest
                         spec:
                           store:
@@ -265,7 +262,7 @@ pipeline:
                               gitFetchType: Branch
                               branch: "<+pipeline.variables.GitBranch>"
                               paths:
-                                - "manifests/liquibase-job-template.yaml"
+                                - manifests/liquibase‑job‑template.yaml
                           skipResourceVersioning: true
 
           environment:
@@ -276,9 +273,8 @@ pipeline:
 
           execution:
             steps:
-
               - step:
-                  name: generate_manifest_prod
+                  name: Generate Manifest (Prod)
                   identifier: generate_manifest_prod
                   type: ShellScript
                   spec:
@@ -300,33 +296,32 @@ pipeline:
                       - name: GIT_BRANCH
                         type: String
                         value: "<+pipeline.variables.GitBranch>"
-                    outputVariables:
-                      - name: JOB_NAME
-                    command: |
-                      cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                      sed -i "s|__DB_HOST__|$DB_HOST|g"          ci_manifest.yaml
-                      sed -i "s|__DB_USER__|$DB_USER|g"          ci_manifest.yaml
-                      sed -i "s|__DB_PASSWORD__|$DB_PASS|g"       ci_manifest.yaml
-                      sed -i "s|__TARGET_DB__|$TARGET_DB|g"       ci_manifest.yaml
-                      sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"     ci_manifest.yaml
-                      if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
-                        sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
-                      else
-                        sed -i "s|__LIQUIBASE_COMMAND__|update|g"   ci_manifest.yaml
-                      fi
-                      JOB_NAME=$(yq e '.metadata.name' ci_manifest.yaml)
-                      echo "JOB_NAME=$JOB_NAME" > job_name_prod.out
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          cp manifests/liquibase‑job‑template.yaml ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"      ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"      ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"   ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"   ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
+                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
+                          else
+                            sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
+                          fi
 
               - step:
-                  name: apply_job_prod
+                  name: Apply Liquibase Job (Prod)
                   identifier: apply_job_prod
                   type: K8sApply
                   spec:
                     filePaths:
-                      - "ci_manifest.yaml"
+                      - ci_manifest.yaml
 
               - step:
-                  name: delete_job_prod
+                  name: Cleanup Liquibase Job (Prod)
                   identifier: delete_job_prod
                   type: K8sDelete
                   when:
@@ -336,7 +331,7 @@ pipeline:
                       type: ResourceName
                       spec:
                         resources:
-                          - "Job/<+loadFile(\"job_name_prod.out\").JOB_NAME>"
+                          - "Job/liquibase-<+pipeline.variables.GitBranch>"
 
           failureStrategies:
             - onFailure:
