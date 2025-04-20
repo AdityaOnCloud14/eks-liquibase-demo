@@ -348,9 +348,9 @@ pipeline:
                     onDelegate: true
                     source:
                       type: Inline
-                      spec:
-                        script: |
-                          kubectl delete job liquibase-job -n liquibase-demo || true
+                      script: |
+                        kubectl delete job liquibase-job \
+                          -n liquibase-demo || true
 
           failureStrategies:
             - onFailure:
