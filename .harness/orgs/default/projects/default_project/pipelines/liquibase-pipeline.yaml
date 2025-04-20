@@ -26,7 +26,7 @@ pipeline:
     # ────────── DEV ──────────
     - stage:
         name: Dev
-        identifier: Dev
+        identifier: dev
         type: Deployment
         spec:
           deploymentType: Kubernetes
@@ -50,15 +50,17 @@ pipeline:
                               paths:
                                 - "manifests/liquibase-job-template.yaml"
                           skipResourceVersioning: true
+
           environment:
             environmentRef: dev
             deployToAll: false
             infrastructureDefinitions:
               - identifier: eks_connector
+
           execution:
             steps:
 
-              # 1. Generate the rendered Job manifest
+              # 1. Render the Job manifest
               - step:
                   name: generate_manifest_dev
                   identifier: generate_manifest_dev
@@ -99,7 +101,7 @@ pipeline:
                       JOB_NAME=$(yq e '.metadata.name' ci_manifest.yaml)
                       echo "JOB_NAME=$JOB_NAME" > job_name.out
 
-              # 2. Apply the Job and wait
+              # 2. Apply & wait
               - step:
                   name: apply_job_dev
                   identifier: apply_job_dev
@@ -110,7 +112,7 @@ pipeline:
                     skipDryRun: false
                     skipSteadyStateCheck: false
 
-              # 3. Always clean up the Job (success or failure)
+              # 3. Cleanup on success or failure
               - step:
                   name: delete_job_dev
                   identifier: delete_job_dev
@@ -119,7 +121,7 @@ pipeline:
                     stageStatus: All
                   spec:
                     deleteResources:
-                      type: DeleteResourceName
+                      type: ResourceName
                       spec:
                         resources:
                           - "Job/<+loadFile(\"job_name.out\").JOB_NAME>"
@@ -135,7 +137,7 @@ pipeline:
     # ────────── TEST ──────────
     - stage:
         name: Test
-        identifier: Test
+        identifier: test
         type: Deployment
         spec:
           deploymentType: Kubernetes
@@ -159,11 +161,13 @@ pipeline:
                               paths:
                                 - "manifests/liquibase-job-template.yaml"
                           skipResourceVersioning: true
+
           environment:
             environmentRef: test
             deployToAll: false
             infrastructureDefinitions:
               - identifier: eks_connector
+
           execution:
             steps:
 
@@ -223,7 +227,7 @@ pipeline:
                     stageStatus: All
                   spec:
                     deleteResources:
-                      type: DeleteResourceName
+                      type: ResourceName
                       spec:
                         resources:
                           - "Job/<+loadFile(\"job_name_test.out\").JOB_NAME>"
@@ -239,7 +243,7 @@ pipeline:
     # ────────── PROD ──────────
     - stage:
         name: Prod
-        identifier: Prod
+        identifier: prod
         type: Deployment
         spec:
           deploymentType: Kubernetes
@@ -263,11 +267,13 @@ pipeline:
                               paths:
                                 - "manifests/liquibase-job-template.yaml"
                           skipResourceVersioning: true
+
           environment:
             environmentRef: prod
             deployToAll: false
             infrastructureDefinitions:
               - identifier: eks_connector
+
           execution:
             steps:
 
@@ -327,7 +333,7 @@ pipeline:
                     stageStatus: All
                   spec:
                     deleteResources:
-                      type: DeleteResourceName
+                      type: ResourceName
                       spec:
                         resources:
                           - "Job/<+loadFile(\"job_name_prod.out\").JOB_NAME>"
