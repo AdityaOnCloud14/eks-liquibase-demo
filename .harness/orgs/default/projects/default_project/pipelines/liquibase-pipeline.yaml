@@ -4,7 +4,7 @@ pipeline:
   orgIdentifier: default
   projectIdentifier: default_project
 
-  # ← tell Harness where to pull this YAML from
+  # ← Where to pull this YAML from
   repo:
     connectorRef: github_conenctor
     repositoryName: AdityaOnCloud14/eks-liquibase-demo
@@ -21,11 +21,11 @@ pipeline:
         - rollback
     - name: RollbackCount
       type: Number
-      description: How many changesets to rollback (if rollback)
+      description: Number of changesets to rollback
       default: 1
     - name: GitBranch
       type: String
-      description: Git branch where your template lives
+      description: Branch where the template lives
       default: main
 
   stages:
@@ -94,7 +94,7 @@ pipeline:
                     source:
                       type: Inline
                       spec:
-                        script: |-
+                        script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
                           sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
@@ -106,9 +106,7 @@ pipeline:
                           else
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
-                          # capture the generated Job name
                           JOB=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "LIQUIBASE_JOB_NAME=$JOB"
                           echo "export LIQUIBASE_JOB_NAME=$JOB" >> harness_env_export.sh
 
               # 2) Apply the Job
@@ -130,11 +128,10 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    deleteResources:
-                      type: ResourceName
-                      spec:
-                        resources:
-                          - "Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
+                    resourceNames:
+                      - "<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
+                    skipDryRun: false
+                    skipSteadyStateCheck: false
 
           failureStrategies:
             - onFailure:
@@ -207,7 +204,7 @@ pipeline:
                     source:
                       type: Inline
                       spec:
-                        script: |-
+                        script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
                           sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
@@ -220,7 +217,6 @@ pipeline:
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
                           JOB=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "LIQUIBASE_JOB_NAME=$JOB"
                           echo "export LIQUIBASE_JOB_NAME=$JOB" >> harness_env_export.sh
 
               - step:
@@ -240,11 +236,10 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    deleteResources:
-                      type: ResourceName
-                      spec:
-                        resources:
-                          - "Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
+                    resourceNames:
+                      - "<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
+                    skipDryRun: false
+                    skipSteadyStateCheck: false
 
           failureStrategies:
             - onFailure:
@@ -317,7 +312,7 @@ pipeline:
                     source:
                       type: Inline
                       spec:
-                        script: |-
+                        script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
                           sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
@@ -330,7 +325,6 @@ pipeline:
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
                           JOB=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "LIQUIBASE_JOB_NAME=$JOB"
                           echo "export LIQUIBASE_JOB_NAME=$JOB" >> harness_env_export.sh
 
               - step:
@@ -350,11 +344,10 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    deleteResources:
-                      type: ResourceName
-                      spec:
-                        resources:
-                          - "Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
+                    resourceNames:
+                      - "<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
+                    skipDryRun: false
+                    skipSteadyStateCheck: false
 
           failureStrategies:
             - onFailure:
