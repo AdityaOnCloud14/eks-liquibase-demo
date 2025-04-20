@@ -4,7 +4,7 @@ pipeline:
   orgIdentifier: default
   projectIdentifier: default_project
 
-  # ← Where to pull this YAML from
+  # where to fetch this pipeline YAML
   repo:
     connectorRef: github_conenctor
     repositoryName: AdityaOnCloud14/eks-liquibase-demo
@@ -14,18 +14,16 @@ pipeline:
   variables:
     - name: OperationType
       type: String
-      description: Liquibase operation (“update” or “rollback”)
+      description: Liquibase operation
       default: update
-      allowedValues:
-        - update
-        - rollback
+      allowedValues: [ update, rollback ]
     - name: RollbackCount
       type: Number
-      description: Number of changesets to rollback
+      description: How many changesets to roll back
       default: 1
     - name: GitBranch
       type: String
-      description: Branch where the template lives
+      description: Branch containing the manifest template
       default: main
 
   stages:
@@ -34,6 +32,14 @@ pipeline:
         name: DevDatabaseMigration
         identifier: Dev
         type: Deployment
+
+        # stop immediately on any error
+        failureStrategies:
+          - onFailure:
+              errors: [ AllErrors ]
+              action:
+                type: Abort
+
         spec:
           deploymentType: Kubernetes
 
@@ -66,8 +72,7 @@ pipeline:
 
           execution:
             steps:
-
-              # 1) Render the Job manifest
+              # 1) render the Job
               - step:
                   name: GenerateManifestDev
                   identifier: GenerateManifestDev
@@ -78,16 +83,16 @@ pipeline:
                     environmentVariables:
                       - name: DB_HOST
                         type: Secret
-                        value: "<+secrets.getValue(\"DB_HOST\")>"
+                        value: "<+secrets.getValue('DB_HOST')>"
                       - name: DB_USER
                         type: Secret
-                        value: "<+secrets.getValue(\"DB_USER\")>"
+                        value: "<+secrets.getValue('DB_USER')>"
                       - name: DB_PASS
                         type: Secret
-                        value: "<+secrets.getValue(\"DB_PASS\")>"
+                        value: "<+secrets.getValue('DB_PASS')>"
                       - name: TARGET_DB
                         type: Secret
-                        value: "<+secrets.getValue(\"DB_NAME\")>"
+                        value: "<+secrets.getValue('DB_NAME')>"
                       - name: GIT_BRANCH
                         type: String
                         value: "<+pipeline.variables.GitBranch>"
@@ -106,10 +111,10 @@ pipeline:
                           else
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
-                          JOB=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "export LIQUIBASE_JOB_NAME=$JOB" >> harness_env_export.sh
+                          NAME=$(yq e '.metadata.name' ci_manifest.yaml)
+                          echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
 
-              # 2) Apply the Job
+              # 2) apply it
               - step:
                   name: ApplyJobDev
                   identifier: ApplyJobDev
@@ -120,7 +125,7 @@ pipeline:
                     skipDryRun: false
                     skipSteadyStateCheck: false
 
-              # 3) Always delete the Job afterwards
+              # 3) always clean up
               - step:
                   name: CleanupJobDev
                   identifier: CleanupJobDev
@@ -128,16 +133,13 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    resourceNames:
-                      - "<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
+                    deleteResources:
+                      type: DeleteResourceName
+                      spec:
+                        resources:
+                          - "Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
-
-          failureStrategies:
-            - onFailure:
-                errors: [AllErrors]
-                action:
-                  type: Abort
 
 
     # ─────────── TEST ───────────
@@ -145,6 +147,13 @@ pipeline:
         name: TestDatabaseMigration
         identifier: Test
         type: Deployment
+
+        failureStrategies:
+          - onFailure:
+              errors: [ AllErrors ]
+              action:
+                type: Abort
+
         spec:
           deploymentType: Kubernetes
 
@@ -177,7 +186,6 @@ pipeline:
 
           execution:
             steps:
-
               - step:
                   name: GenerateManifestTest
                   identifier: GenerateManifestTest
@@ -188,16 +196,16 @@ pipeline:
                     environmentVariables:
                       - name: DB_HOST
                         type: Secret
-                        value: "<+secrets.getValue(\"TEST_DB_HOST\")>"
+                        value: "<+secrets.getValue('TEST_DB_HOST')>"
                       - name: DB_USER
                         type: Secret
-                        value: "<+secrets.getValue(\"TEST_DB_USER\")>"
+                        value: "<+secrets.getValue('TEST_DB_USER')>"
                       - name: DB_PASS
                         type: Secret
-                        value: "<+secrets.getValue(\"TEST_DB_PASS\")>"
+                        value: "<+secrets.getValue('TEST_DB_PASS')>"
                       - name: TARGET_DB
                         type: Secret
-                        value: "<+secrets.getValue(\"TEST_DB_NAME\")>"
+                        value: "<+secrets.getValue('TEST_DB_NAME')>"
                       - name: GIT_BRANCH
                         type: String
                         value: "<+pipeline.variables.GitBranch>"
@@ -216,8 +224,8 @@ pipeline:
                           else
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
-                          JOB=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "export LIQUIBASE_JOB_NAME=$JOB" >> harness_env_export.sh
+                          NAME=$(yq e '.metadata.name' ci_manifest.yaml)
+                          echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
 
               - step:
                   name: ApplyJobTest
@@ -236,16 +244,13 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    resourceNames:
-                      - "<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
+                    deleteResources:
+                      type: DeleteResourceName
+                      spec:
+                        resources:
+                          - "Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
-
-          failureStrategies:
-            - onFailure:
-                errors: [AllErrors]
-                action:
-                  type: Abort
 
 
     # ─────────── PROD ───────────
@@ -253,6 +258,13 @@ pipeline:
         name: ProdDatabaseMigration
         identifier: Prod
         type: Deployment
+
+        failureStrategies:
+          - onFailure:
+              errors: [ AllErrors ]
+              action:
+                type: Abort
+
         spec:
           deploymentType: Kubernetes
 
@@ -285,7 +297,6 @@ pipeline:
 
           execution:
             steps:
-
               - step:
                   name: GenerateManifestProd
                   identifier: GenerateManifestProd
@@ -296,16 +307,16 @@ pipeline:
                     environmentVariables:
                       - name: DB_HOST
                         type: Secret
-                        value: "<+secrets.getValue(\"PROD_DB_HOST\")>"
+                        value: "<+secrets.getValue('PROD_DB_HOST')>"
                       - name: DB_USER
                         type: Secret
-                        value: "<+secrets.getValue(\"PROD_DB_USER\")>"
+                        value: "<+secrets.getValue('PROD_DB_USER')>"
                       - name: DB_PASS
                         type: Secret
-                        value: "<+secrets.getValue(\"PROD_DB_PASS\")>"
+                        value: "<+secrets.getValue('PROD_DB_PASS')>"
                       - name: TARGET_DB
                         type: Secret
-                        value: "<+secrets.getValue(\"PROD_DB_NAME\")>"
+                        value: "<+secrets.getValue('PROD_DB_NAME')>"
                       - name: GIT_BRANCH
                         type: String
                         value: "<+pipeline.variables.GitBranch>"
@@ -324,8 +335,8 @@ pipeline:
                           else
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
-                          JOB=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "export LIQUIBASE_JOB_NAME=$JOB" >> harness_env_export.sh
+                          NAME=$(yq e '.metadata.name' ci_manifest.yaml)
+                          echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
 
               - step:
                   name: ApplyJobProd
@@ -344,13 +355,10 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    resourceNames:
-                      - "<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
+                    deleteResources:
+                      type: DeleteResourceName
+                      spec:
+                        resources:
+                          - "Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
-
-          failureStrategies:
-            - onFailure:
-                errors: [AllErrors]
-                action:
-                  type: Abort
