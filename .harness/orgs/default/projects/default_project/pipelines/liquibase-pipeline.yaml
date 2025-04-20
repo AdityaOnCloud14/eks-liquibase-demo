@@ -104,6 +104,8 @@ pipeline:
                   name: Cleanup Liquibase Job Dev
                   identifier: delete_job_dev
                   type: K8sDelete
+                  when:
+                    stageStatus: All
                   spec:
                     deleteResources:
                       type: DeleteResourceName
@@ -116,8 +118,9 @@ pipeline:
                 errors:
                   - AllErrors
                 action:
-                  type: StageRollback
+                  type: Abort
 
+    # --- STAGE: TEST ---
     - stage:
         name: Test
         identifier: test
@@ -203,6 +206,8 @@ pipeline:
                   name: Cleanup Liquibase Job Test
                   identifier: delete_job_test
                   type: K8sDelete
+                  when:
+                    stageStatus: All
                   spec:
                     deleteResources:
                       type: DeleteResourceName
@@ -215,8 +220,9 @@ pipeline:
                 errors:
                   - AllErrors
                 action:
-                  type: StageRollback
+                  type: Abort
 
+    # --- STAGE: PROD ---
     - stage:
         name: Prod
         identifier: prod
@@ -302,6 +308,8 @@ pipeline:
                   name: Cleanup Liquibase Job Prod
                   identifier: delete_job_prod
                   type: K8sDelete
+                  when:
+                    stageStatus: All
                   spec:
                     deleteResources:
                       type: DeleteResourceName
@@ -314,4 +322,4 @@ pipeline:
                 errors:
                   - AllErrors
                 action:
-                  type: StageRollback
+                  type: Abort
