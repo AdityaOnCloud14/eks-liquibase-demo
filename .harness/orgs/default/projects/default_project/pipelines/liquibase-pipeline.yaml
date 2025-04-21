@@ -61,7 +61,7 @@ pipeline:
           environment:
             environmentRef: dev
             deployToAll: false
-            infrastructure:
+            infrastructureDefinitions:
               identifier: eks_infra_dev
               type: KubernetesDirect
               spec:  # Add this missing block
@@ -168,7 +168,7 @@ pipeline:
           environment:
             environmentRef: test
             deployToAll: false
-            infrastructure:
+            infrastructureDefinitions:
               identifier: eks_infra_test
               type: KubernetesDirect
               spec:  # Add this missing block
@@ -275,7 +275,7 @@ pipeline:
           environment:
             environmentRef: prod
             deployToAll: false
-            infrastructure:
+            infrastructureDefinitions:
               identifier: eks_infra_prod
               type: KubernetesDirect
               spec:  # Add this missing block
