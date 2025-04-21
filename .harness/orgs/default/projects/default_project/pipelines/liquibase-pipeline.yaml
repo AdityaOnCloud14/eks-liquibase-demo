@@ -7,22 +7,18 @@ pipeline:
     - name: OperationType
       type: String
       default: update
-      value: update
       allowedValues:
         - update
         - rollbackCount
     - name: RollbackCount
       type: String
       default: "1"
-      value: "1"
     - name: GitBranch
       type: String
       default: main
-      value: main
     - name: TargetDB
       type: String
       default: demo_db
-      value: demo_db
   stages:
     - stage:
         name: LiquibaseDevMigration
@@ -101,11 +97,9 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          echo "Cloning repo..."
-                          rm -rf repo
-                          git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git repo
+                          echo "Using fetched manifest from HARNESS_MANIFESTS..."
                           mkdir -p harness/manifest
-                          cp repo/manifests/liquibase-job-template.yaml harness/manifest/ci_manifest.yaml
+                          cp ${HARNESS_MANIFESTS}/LiquibaseJobTemplate/liquibase-job-template.yaml harness/manifest/ci_manifest.yaml
 
                           sed -i "s|__DB_HOST__|$DB_HOST|g" harness/manifest/ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g" harness/manifest/ci_manifest.yaml
