@@ -28,6 +28,12 @@ pipeline:
         name: LiquibaseDevMigration
         identifier: LiquibaseDev
         type: Deployment
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: Abort
         spec:
           deploymentType: Kubernetes
           service:
