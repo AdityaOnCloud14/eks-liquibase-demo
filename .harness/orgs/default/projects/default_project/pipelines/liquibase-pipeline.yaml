@@ -100,17 +100,22 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          cp ${HARNESS_MANIFESTS}/LiquibaseJobTemplate/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          echo "Cloning manifest repo..."
+                          git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git repo
+                          cp repo/manifests/liquibase-job-template.yaml ci_manifest.yaml
+
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"       ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"       ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"     ci_manifest.yaml
+
                           if [ "$OPERATION_TYPE" = "rollback" ]; then
                             sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount $ROLLBACK_COUNT|g" ci_manifest.yaml
                           else
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
+
                           NAME=$(grep 'name:' ci_manifest.yaml | head -1 | awk '{print $2}')
                           echo "LIQUIBASE_JOB_NAME=$NAME"
               - step:
