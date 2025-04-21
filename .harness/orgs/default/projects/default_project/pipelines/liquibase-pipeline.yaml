@@ -1,6 +1,6 @@
 pipeline:
-  name: Liquibase Dev Deployment
-  identifier: LiquibaseDevDeployment
+  name: Liquibase Dev Deployment (Static Manifest)
+  identifier: LiquibaseDevStatic
   orgIdentifier: default
   projectIdentifier: default_project
   variables:
@@ -25,8 +25,8 @@ pipeline:
       value: <+input>
   stages:
     - stage:
-        name: LiquibaseDevMigration
-        identifier: LiquibaseDev
+        name: LiquibaseDevMigrationStatic
+        identifier: LiquibaseDevStatic
         type: Deployment
         failureStrategies:
           - onFailure:
@@ -66,71 +66,35 @@ pipeline:
           execution:
             steps:
               - step:
-                  name: GenerateManifest
-                  identifier: GenerateManifest
-                  type: ShellScript
-                  timeout: 10m
-                  spec:
-                    shell: Bash
-                    onDelegate: true
-                    environmentVariables:
-                      - name: DB_HOST
-                        type: Secret
-                        value: <+secrets.getValue('DB_HOST')>
-                      - name: DB_USER
-                        type: Secret
-                        value: <+secrets.getValue('DB_USER')>
-                      - name: DB_PASS
-                        type: Secret
-                        value: <+secrets.getValue('DB_PASS')>
-                      - name: TARGET_DB
-                        type: String
-                        value: <+pipeline.variables.TargetDB>
-                      - name: GIT_BRANCH
-                        type: String
-                        value: <+pipeline.variables.GitBranch>
-                      - name: OPERATION_TYPE
-                        type: String
-                        value: <+pipeline.variables.OperationType>
-                      - name: ROLLBACK_COUNT
-                        type: String
-                        value: <+pipeline.variables.RollbackCount>
-                    outputVariables:
-                      - name: LIQUIBASE_JOB_NAME
-                        type: String
-                        value: <+execution.outputVariables.LIQUIBASE_JOB_NAME>
-                    source:
-                      type: Inline
-                      spec:
-                        script: |
-                          echo "Using manifest fetched by Harness Git connector..."
-                          mkdir -p harness/manifest
-                          cp harness/manifest/liquibase-job-template.yaml harness/manifest/ci_manifest.yaml
-
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" harness/manifest/ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" harness/manifest/ci_manifest.yaml
-                          sed -i "s|__DB_PASS__|$DB_PASS|g" harness/manifest/ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" harness/manifest/ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" harness/manifest/ci_manifest.yaml
-
-                          if [ "$OPERATION_TYPE" = "rollbackCount" ]; then
-                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount $ROLLBACK_COUNT|g" harness/manifest/ci_manifest.yaml
-                          else
-                            sed -i "s|__LIQUIBASE_COMMAND__|update|g" harness/manifest/ci_manifest.yaml
-                          fi
-
-                          NAME=$(grep 'name:' harness/manifest/ci_manifest.yaml | head -1 | awk '{print $2}')
-                          echo "LIQUIBASE_JOB_NAME=$NAME"
-              - step:
                   name: ApplyLiquibaseJob
                   identifier: ApplyLiquibaseJob
                   type: K8sApply
                   timeout: 10m
                   spec:
-                    filePaths:
-                      - harness/manifest/ci_manifest.yaml
                     skipDryRun: false
                     skipSteadyStateCheck: false
+                    filePaths:
+                      - manifests/liquibase-job-template.yaml
+                    overrides:
+                      - name: JOB_ENV_VARS
+                        type: Environment
+                        spec:
+                          variables:
+                            - name: DB_HOST
+                              type: Secret
+                              value: <+secrets.getValue('DB_HOST')>
+                            - name: DB_USER
+                              type: Secret
+                              value: <+secrets.getValue('DB_USER')>
+                            - name: DB_PASS
+                              type: Secret
+                              value: <+secrets.getValue('DB_PASS')>
+                            - name: DB_NAME
+                              type: String
+                              value: <+pipeline.variables.TargetDB>
+                            - name: LIQUIBASE_COMMAND
+                              type: String
+                              value: <+pipeline.variables.OperationType == "rollbackCount" ? "rollbackCount " + pipeline.variables.RollbackCount : "update">
               - step:
                   name: WaitForCompletion
                   identifier: WaitForCompletion
@@ -144,9 +108,9 @@ pipeline:
                       spec:
                         script: |
                           echo "Waiting for job to complete..."
-                          kubectl wait --for=condition=complete job/$LIQUIBASE_JOB_NAME -n liquibase-demo --timeout=300s
-                          POD=$(kubectl get pods -n liquibase-demo -l job-name=$LIQUIBASE_JOB_NAME -o jsonpath="{.items[0].metadata.name}")
-                          echo "Logs for job $LIQUIBASE_JOB_NAME:"
+                          kubectl wait --for=condition=complete job/liquibase-job -n liquibase-demo --timeout=300s
+                          POD=$(kubectl get pods -n liquibase-demo -l job-name=liquibase-job -o jsonpath="{.items[0].metadata.name}")
+                          echo "Logs for Liquibase Job:"
                           kubectl logs $POD -n liquibase-demo
               - step:
                   name: CleanupLiquibaseJob
@@ -158,6 +122,6 @@ pipeline:
                   spec:
                     deleteResources:
                       names:
-                        - Job/<+step.GenerateManifest.output.LIQUIBASE_JOB_NAME>
+                        - Job/liquibase-job
                     skipDryRun: false
                     skipSteadyStateCheck: false
