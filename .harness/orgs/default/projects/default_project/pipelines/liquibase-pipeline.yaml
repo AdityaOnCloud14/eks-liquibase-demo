@@ -1,5 +1,5 @@
 pipeline:
-  name: Liquibase Dev Deployment (Static Manifest)
+  name: LiquibaseDevStatic
   identifier: LiquibaseDevStatic
   orgIdentifier: default
   projectIdentifier: default_project
@@ -23,10 +23,14 @@ pipeline:
       type: String
       default: demo_db
       value: <+input>
+    - name: LiquibaseCommand
+      type: String
+      default: update
+      value: <+input>
   stages:
     - stage:
-        name: LiquibaseDevMigrationStatic
-        identifier: LiquibaseDevStatic
+        name: LiquibaseDevStaticStage
+        identifier: LiquibaseDevStaticStage
         type: Deployment
         failureStrategies:
           - onFailure:
@@ -71,30 +75,8 @@ pipeline:
                   type: K8sApply
                   timeout: 10m
                   spec:
-                    skipDryRun: false
-                    skipSteadyStateCheck: false
                     filePaths:
                       - manifests/liquibase-job-template.yaml
-                    overrides:
-                      - name: JOB_ENV_VARS
-                        type: Environment
-                        spec:
-                          variables:
-                            - name: DB_HOST
-                              type: Secret
-                              value: <+secrets.getValue('DB_HOST')>
-                            - name: DB_USER
-                              type: Secret
-                              value: <+secrets.getValue('DB_USER')>
-                            - name: DB_PASS
-                              type: Secret
-                              value: <+secrets.getValue('DB_PASS')>
-                            - name: DB_NAME
-                              type: String
-                              value: <+pipeline.variables.TargetDB>
-                            - name: LIQUIBASE_COMMAND
-                              type: String
-                              value: <+pipeline.variables.OperationType == "rollbackCount" ? "rollbackCount " + pipeline.variables.RollbackCount : "update">
               - step:
                   name: WaitForCompletion
                   identifier: WaitForCompletion
