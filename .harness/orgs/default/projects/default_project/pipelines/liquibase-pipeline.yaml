@@ -86,6 +86,7 @@ pipeline:
                       spec:
                         script: |
                           echo "Cloning manifest repo..."
+                          rm -rf repo
                           git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git repo
                           mkdir -p harness/manifest
                           cp repo/manifests/liquibase-job-template.yaml harness/manifest/ci_manifest.yaml
