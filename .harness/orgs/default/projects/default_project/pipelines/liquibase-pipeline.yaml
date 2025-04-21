@@ -44,18 +44,20 @@ pipeline:
                 spec:
                   manifests:
                     - manifest:
-                        identifier: LiquibaseJobTemplate
-                        type: KubernetesManifest
+                        identifier: liquibase_job_manifest
+                        type: K8sManifest
                         spec:
                           store:
-                            type: Git
+                            type: Github
                             spec:
                               connectorRef: github_connector
                               gitFetchType: Branch
-                              branch: <+pipeline.variables.GitBranch>
                               paths:
                                 - manifests/liquibase-job-template.yaml
-                          skipResourceVersioning: true
+                              repoName: AdityaOnCloud14/eks-liquibase-demo
+                              branch: <+pipeline.variables.GitBranch>
+                          skipResourceVersioning: false
+                          enableDeclarativeRollback: false
           environment:
             environmentRef: dev
             deployToAll: false
@@ -101,9 +103,9 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          echo "Using fetched manifest from HARNESS_MANIFESTS..."
+                          echo "Using manifest fetched by Harness Git connector..."
                           mkdir -p harness/manifest
-                          cp ${HARNESS_MANIFESTS}/LiquibaseJobTemplate/liquibase-job-template.yaml harness/manifest/ci_manifest.yaml
+                          cp harness/manifest/liquibase-job-template.yaml harness/manifest/ci_manifest.yaml
 
                           sed -i "s|__DB_HOST__|$DB_HOST|g" harness/manifest/ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g" harness/manifest/ci_manifest.yaml
