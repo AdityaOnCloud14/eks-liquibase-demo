@@ -14,12 +14,10 @@ pipeline:
         - rollback
     - name: RollbackCount
       type: Number
-      description: How many changesets to roll back
       value: 1
       default: 1
     - name: GitBranch
       type: String
-      description: Branch to pull the template from
       value: main
       default: main
   stages:
@@ -41,25 +39,12 @@ pipeline:
               serviceDefinition:
                 type: Kubernetes
                 spec:
-                  manifests:
-                    - manifest:
-                        identifier: LiquibaseJobTemplate
-                        type: KubernetesManifest
-                        spec:
-                          store:
-                            type: Git
-                            spec:
-                              connectorRef: github_connector
-                              gitFetchType: Branch
-                              branch: <+pipeline.variables.GitBranch>
-                              paths:
-                                - manifests/liquibase-job-template.yaml
-                          skipResourceVersioning: true
+                  manifests: []  # intentionally empty since we're using a generated manifest
           environment:
             environmentRef: dev
             deployToAll: false
-            infrastructureDefinitions:
-              - identifier: eks_infra_dev
+            infrastructureDefinition:
+              identifier: eks_infra_dev
           execution:
             steps:
               - step:
@@ -102,21 +87,22 @@ pipeline:
                         script: |
                           echo "Cloning manifest repo..."
                           git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git repo
-                          cp repo/manifests/liquibase-job-template.yaml ci_manifest.yaml
+                          mkdir -p harness/manifest
+                          cp repo/manifests/liquibase-job-template.yaml harness/manifest/ci_manifest.yaml
 
-                          sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"       ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"       ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"     ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g" harness/manifest/ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g" harness/manifest/ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g" harness/manifest/ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" harness/manifest/ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" harness/manifest/ci_manifest.yaml
 
                           if [ "$OPERATION_TYPE" = "rollback" ]; then
-                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount $ROLLBACK_COUNT|g" ci_manifest.yaml
+                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount $ROLLBACK_COUNT|g" harness/manifest/ci_manifest.yaml
                           else
-                            sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
+                            sed -i "s|__LIQUIBASE_COMMAND__|update|g" harness/manifest/ci_manifest.yaml
                           fi
 
-                          NAME=$(grep 'name:' ci_manifest.yaml | head -1 | awk '{print $2}')
+                          NAME=$(grep 'name:' harness/manifest/ci_manifest.yaml | head -1 | awk '{print $2}')
                           echo "LIQUIBASE_JOB_NAME=$NAME"
               - step:
                   name: ApplyJobDev
@@ -125,7 +111,7 @@ pipeline:
                   timeout: 10m
                   spec:
                     filePaths:
-                      - ci_manifest.yaml
+                      - harness/manifest/ci_manifest.yaml
                     skipDryRun: false
                     skipSteadyStateCheck: false
               - step:
