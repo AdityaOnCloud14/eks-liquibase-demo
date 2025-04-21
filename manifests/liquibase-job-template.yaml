@@ -1,33 +1,57 @@
-# harness.io/skip-file-for-deploy   <- Instruct Harness to skip this manifest in the main deployment&#8203;:contentReference[oaicite:6]{index=6}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: liquibase-__GIT_BRANCH__                   # Job name includes branch (will be lowercased on replace)
+  name: liquibase-job
+  namespace: liquibase-demo
+  labels:
+    app: liquibase-migrator
 spec:
-  backoffLimit: 0                                 # Do not retry failed job (fail fast on error)
+  backoffLimit: 5
   template:
+    metadata:
+      labels:
+        app: liquibase
     spec:
+      restartPolicy: OnFailure
+      volumes:
+        - name: changelog-volume
+          emptyDir: {}
+      initContainers:
+        - name: git-clone
+          image: alpine/git:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - clone
+            - --depth=1
+            - --single-branch
+            - -b
+            - __GIT_BRANCH__
+            - "https://github.com/AdityaOnCloud14/eks-liquibase-demo.git"
+            - "/workspace"
+          volumeMounts:
+            - name: changelog-volume
+              mountPath: /workspace
       containers:
         - name: liquibase
-          image: liquibase/liquibase:latest        # Use official Liquibase Docker image (includes PostgreSQL driver)&#8203;:contentReference[oaicite:7]{index=7}
+          image: liquibase/liquibase:latest
+          imagePullPolicy: IfNotPresent
           env:
-            - name: LIQUIBASE_COMMAND_URL
-              value: jdbc:postgresql://__DB_HOST__:5432/__TARGET_DB__
-            - name: LIQUIBASE_COMMAND_USERNAME
-              value: __DB_USER__
-            - name: LIQUIBASE_COMMAND_PASSWORD
-              value: __DB_PASSWORD__
-            - name: LIQUIBASE_COMMAND_CHANGELOG_FILE
-              value: /liquibase/changelog/master.xml   # Path to changelog file (adjust to your changelog)
-          command:
-            - liquibase
+            - name: DB_HOST
+              value: "__DB_HOST__"
+            - name: DB_NAME
+              value: "__DB_NAME__"
+            - name: DB_USER
+              value: "__DB_USER__"
+            - name: DB_PASS
+              value: "__DB_PASS__"
+          volumeMounts:
+            - name: changelog-volume
+              mountPath: /workspace
+          workingDir: /workspace/liquibase
+          command: ["/bin/sh"]
           args:
-            - "__LIQUIBASE_COMMAND__"              # Placeholder for 'update' or 'rollbackCount X'
-          # Alternatively, you could use a combined command line:
-          # args:
-          #   - update
-          #   - --changeLogFile=/liquibase/changelog/master.xml 
-          #   - --url=jdbc:postgresql://__DB_HOST__:5432/__TARGET_DB__ 
-          #   - --username=__DB_USER__ 
-          #   - --password=${LIQUIBASE_COMMAND_PASSWORD}
-      restartPolicy: Never
+            - "-c"
+            - |
+              JDBC_URL="jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}"
+              echo "Running Liquibase command against ${JDBC_URL}"
+              liquibase --url="$JDBC_URL" --username="$DB_USER" --password="$DB_PASS" --changeLogFile=db.changelog-master.xml __LIQUIBASE_COMMAND__
