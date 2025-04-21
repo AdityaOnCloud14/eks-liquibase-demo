@@ -7,18 +7,22 @@ pipeline:
     - name: OperationType
       type: String
       default: update
+      value: <+input>
       allowedValues:
         - update
         - rollbackCount
     - name: RollbackCount
       type: String
       default: "1"
+      value: <+input>
     - name: GitBranch
       type: String
       default: main
+      value: <+input>
     - name: TargetDB
       type: String
       default: demo_db
+      value: <+input>
   stages:
     - stage:
         name: LiquibaseDevMigration
