@@ -111,8 +111,8 @@ pipeline:
                           else
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
-                          NAME=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "LIQUIBASE_JOB_NAME=$NAME" >> $HARNESS_OUTPUT_PATH
+                          NAME=$(grep 'name:' ci_manifest.yaml | head -1 | awk '{print $2}')
+                          echo "LIQUIBASE_JOB_NAME=$NAME"
               - step:
                   name: ApplyJobDev
                   identifier: ApplyJobDev
@@ -226,8 +226,8 @@ pipeline:
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
 
-                          NAME=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "LIQUIBASE_JOB_NAME=$NAME" >> $HARNESS_OUTPUT_PATH
+                          NAME=$(grep 'name:' ci_manifest.yaml | head -1 | awk '{print $2}')
+                          echo "LIQUIBASE_JOB_NAME=$NAME"
               - step:
                   name: ApplyJobTest
                   identifier: ApplyJobTest
@@ -341,8 +341,8 @@ pipeline:
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
 
-                          NAME=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "LIQUIBASE_JOB_NAME=$NAME" >> $HARNESS_OUTPUT_PATH
+                          NAME=$(grep 'name:' ci_manifest.yaml | head -1 | awk '{print $2}')
+                          echo "LIQUIBASE_JOB_NAME=$NAME"
               - step:
                   name: ApplyJobProd
                   identifier: ApplyJobProd
