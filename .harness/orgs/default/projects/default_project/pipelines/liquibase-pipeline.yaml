@@ -92,6 +92,14 @@ pipeline:
                       - name: GIT_BRANCH
                         type: String
                         value: <+pipeline.variables.GitBranch>
+                      - name: OPERATION_TYPE
+                        type: String
+                        value: <+pipeline.variables.OperationType>
+                      - name: ROLLBACK_COUNT
+                        type: String
+                        value: <+pipeline.variables.RollbackCount>
+                    outputVariables:
+                      - name: LIQUIBASE_JOB_NAME
                     source:
                       type: Inline
                       spec:
@@ -99,16 +107,18 @@ pipeline:
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
                           sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"        ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"        ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"      ci_manifest.yaml
-                          if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
-                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"       ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"       ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"     ci_manifest.yaml
+
+                          if [ "$OPERATION_TYPE" = "rollback" ]; then
+                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount $ROLLBACK_COUNT|g" ci_manifest.yaml
                           else
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
+
                           NAME=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
+                          echo "LIQUIBASE_JOB_NAME=$NAME" >> $HARNESS_OUTPUT_PATH
               - step:
                   name: ApplyJobDev
                   identifier: ApplyJobDev
@@ -131,6 +141,7 @@ pipeline:
                     skipDryRun: false
                     skipSteadyStateCheck: false
                     timeout: 10m
+
     - stage:
         name: TestDatabaseMigration
         identifier: Test
@@ -198,6 +209,14 @@ pipeline:
                       - name: GIT_BRANCH
                         type: String
                         value: <+pipeline.variables.GitBranch>
+                      - name: OPERATION_TYPE
+                        type: String
+                        value: <+pipeline.variables.OperationType>
+                      - name: ROLLBACK_COUNT
+                        type: String
+                        value: <+pipeline.variables.RollbackCount>
+                    outputVariables:
+                      - name: LIQUIBASE_JOB_NAME
                     source:
                       type: Inline
                       spec:
@@ -205,16 +224,18 @@ pipeline:
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
                           sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"        ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"        ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"      ci_manifest.yaml
-                          if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
-                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"       ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"       ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"     ci_manifest.yaml
+
+                          if [ "$OPERATION_TYPE" = "rollback" ]; then
+                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount $ROLLBACK_COUNT|g" ci_manifest.yaml
                           else
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
+
                           NAME=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
+                          echo "LIQUIBASE_JOB_NAME=$NAME" >> $HARNESS_OUTPUT_PATH
               - step:
                   name: ApplyJobTest
                   identifier: ApplyJobTest
@@ -237,6 +258,7 @@ pipeline:
                     skipDryRun: false
                     skipSteadyStateCheck: false
                     timeout: 10m
+
     - stage:
         name: ProdDatabaseMigration
         identifier: Prod
@@ -304,6 +326,14 @@ pipeline:
                       - name: GIT_BRANCH
                         type: String
                         value: <+pipeline.variables.GitBranch>
+                      - name: OPERATION_TYPE
+                        type: String
+                        value: <+pipeline.variables.OperationType>
+                      - name: ROLLBACK_COUNT
+                        type: String
+                        value: <+pipeline.variables.RollbackCount>
+                    outputVariables:
+                      - name: LIQUIBASE_JOB_NAME
                     source:
                       type: Inline
                       spec:
@@ -311,16 +341,18 @@ pipeline:
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
                           sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"        ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"        ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"      ci_manifest.yaml
-                          if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
-                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"       ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"       ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"     ci_manifest.yaml
+
+                          if [ "$OPERATION_TYPE" = "rollback" ]; then
+                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount $ROLLBACK_COUNT|g" ci_manifest.yaml
                           else
                             sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
                           fi
+
                           NAME=$(yq e '.metadata.name' ci_manifest.yaml)
-                          echo "export LIQUIBASE_JOB_NAME=$NAME" >> harness_env_export.sh
+                          echo "LIQUIBASE_JOB_NAME=$NAME" >> $HARNESS_OUTPUT_PATH
               - step:
                   name: ApplyJobProd
                   identifier: ApplyJobProd
