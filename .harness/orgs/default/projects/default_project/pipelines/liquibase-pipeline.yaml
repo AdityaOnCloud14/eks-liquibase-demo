@@ -33,7 +33,7 @@ pipeline:
         type: Deployment
         failureStrategies:
           - onFailure:
-              errors: [AllErrors]
+              errors: [ AllErrors ]
               action:
                 type: Abort
         spec:
@@ -61,9 +61,13 @@ pipeline:
           environment:
             environmentRef: dev
             deployToAll: false
-            infrastructureDefinitions:
-              - identifier: eks_infra_dev
-                type: KubernetesDirect
+            infrastructure:
+              identifier: eks_infra_dev
+              type: KubernetesDirect
+              spec:  # Add this missing block
+                connectorRef: eks_connector
+                namespace: liquibase-demo  # Replace with your target namespace
+                releaseName: liquibase-job
           execution:
             steps:
               - step:
@@ -94,11 +98,11 @@ pipeline:
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"        ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"        ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"      ci_manifest.yaml
                           if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
                             sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
                           else
@@ -122,8 +126,9 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    resourceNames:
-                      - "Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
+                    deleteResources:
+                      names:
+                        - "Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
                     timeout: 10m
@@ -135,7 +140,7 @@ pipeline:
         type: Deployment
         failureStrategies:
           - onFailure:
-              errors: [AllErrors]
+              errors: [ AllErrors ]
               action:
                 type: Abort
         spec:
@@ -163,9 +168,13 @@ pipeline:
           environment:
             environmentRef: test
             deployToAll: false
-            infrastructureDefinitions:
-              - identifier: eks_infra_test
-                type: KubernetesDirect
+            infrastructure:
+              identifier: eks_infra_test
+              type: KubernetesDirect
+              spec:  # Add this missing block
+                connectorRef: eks_connector
+                namespace: liquibase-demo  # Replace with your target namespace
+                releaseName: liquibase-job
           execution:
             steps:
               - step:
@@ -196,11 +205,11 @@ pipeline:
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"        ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"        ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"      ci_manifest.yaml
                           if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
                             sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
                           else
@@ -224,8 +233,9 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    resourceNames:
-                      - "Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
+                    deleteResources:
+                      names:
+                        - "Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
                     timeout: 10m
@@ -237,7 +247,7 @@ pipeline:
         type: Deployment
         failureStrategies:
           - onFailure:
-              errors: [AllErrors]
+              errors: [ AllErrors ]
               action:
                 type: Abort
         spec:
@@ -265,9 +275,13 @@ pipeline:
           environment:
             environmentRef: prod
             deployToAll: false
-            infrastructureDefinitions:
-              - identifier: eks_infra_prod
-                type: KubernetesDirect
+            infrastructure:
+              identifier: eks_infra_prod
+              type: KubernetesDirect
+              spec:  # Add this missing block
+                connectorRef: eks_connector
+                namespace: liquibase-demo  # Replace with your target namespace
+                releaseName: liquibase-job
           execution:
             steps:
               - step:
@@ -298,11 +312,11 @@ pipeline:
                       spec:
                         script: |
                           cp manifests/liquibase-job-template.yaml ci_manifest.yaml
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g"           ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g"           ci_manifest.yaml
+                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g"        ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g"        ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g"      ci_manifest.yaml
                           if [ "<+pipeline.variables.OperationType>" = "rollback" ]; then
                             sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount <+pipeline.variables.RollbackCount>|g" ci_manifest.yaml
                           else
@@ -326,8 +340,9 @@ pipeline:
                   when:
                     stageStatus: All
                   spec:
-                    resourceNames:
-                      - "Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
+                    deleteResources:
+                      names:
+                        - "Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>"
                     skipDryRun: false
                     skipSteadyStateCheck: false
                     timeout: 10m
