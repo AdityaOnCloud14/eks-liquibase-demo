@@ -1,12 +1,11 @@
 pipeline:
-  name: Liquibase Deployment Pipeline
-  identifier: LiquibaseDeploymentPipeline
+  name: Liquibase Dev Deployment
+  identifier: LiquibaseDevDeployment
   orgIdentifier: default
   projectIdentifier: default_project
   variables:
     - name: OperationType
       type: String
-      description: Liquibase operation (“update” or “rollbackCount”)
       default: update
       value: update
       allowedValues:
@@ -14,30 +13,21 @@ pipeline:
         - rollbackCount
     - name: RollbackCount
       type: String
-      description: Number of changesets to roll back
       default: "1"
       value: "1"
     - name: GitBranch
       type: String
-      description: Git branch to pull templates from
       default: main
       value: main
     - name: TargetDB
       type: String
-      description: Target database name
       default: demo_db
       value: demo_db
   stages:
     - stage:
-        name: LiquibaseDatabaseMigration
-        identifier: Liquibase
+        name: LiquibaseDevMigration
+        identifier: LiquibaseDev
         type: Deployment
-        failureStrategies:
-          - onFailure:
-              errors:
-                - AllErrors
-              action:
-                type: Abort
         spec:
           deploymentType: Kubernetes
           service:
@@ -105,10 +95,14 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          cp ${HARNESS_MANIFESTS}/LiquibaseJobTemplate/liquibase-job-template.yaml ci_manifest.yaml
+                          echo "Cloning repo..."
+                          rm -rf repo
+                          git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git repo
+                          cp repo/manifests/liquibase-job-template.yaml ci_manifest.yaml
+
                           sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g" ci_manifest.yaml
                           sed -i "s|__TARGET_DB__|$TARGET_DB|g" ci_manifest.yaml
                           sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
 
