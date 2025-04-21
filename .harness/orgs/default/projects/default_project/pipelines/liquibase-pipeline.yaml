@@ -100,7 +100,7 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          cp manifests/liquibase-job-template.yaml ci_manifest.yaml
+                          cp ${HARNESS_MANIFESTS}/LiquibaseJobTemplate/liquibase-job-template.yaml ci_manifest.yaml
                           sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
                           sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
@@ -213,7 +213,7 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          cp manifests/liquibase-job-template.yaml ci_manifest.yaml
+                          cp ${HARNESS_MANIFESTS}/LiquibaseJobTemplate/liquibase-job-template.yaml ci_manifest.yaml
                           sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
                           sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
@@ -328,7 +328,7 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          cp manifests/liquibase-job-template.yaml ci_manifest.yaml
+                          cp ${HARNESS_MANIFESTS}/LiquibaseJobTemplate/liquibase-job-template.yaml ci_manifest.yaml
                           sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
                           sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
                           sed -i "s|__DB_PASSWORD__|$DB_PASS|g" ci_manifest.yaml
