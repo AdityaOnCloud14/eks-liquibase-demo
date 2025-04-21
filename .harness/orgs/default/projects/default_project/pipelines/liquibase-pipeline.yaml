@@ -104,21 +104,22 @@ pipeline:
                           echo "Cloning repo..."
                           rm -rf repo
                           git clone https://github.com/AdityaOnCloud14/eks-liquibase-demo.git repo
-                          cp repo/manifests/liquibase-job-template.yaml ci_manifest.yaml
+                          mkdir -p harness/manifest
+                          cp repo/manifests/liquibase-job-template.yaml harness/manifest/ci_manifest.yaml
 
-                          sed -i "s|__DB_HOST__|$DB_HOST|g" ci_manifest.yaml
-                          sed -i "s|__DB_USER__|$DB_USER|g" ci_manifest.yaml
-                          sed -i "s|__DB_PASS__|$DB_PASS|g" ci_manifest.yaml
-                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" ci_manifest.yaml
-                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" ci_manifest.yaml
+                          sed -i "s|__DB_HOST__|$DB_HOST|g" harness/manifest/ci_manifest.yaml
+                          sed -i "s|__DB_USER__|$DB_USER|g" harness/manifest/ci_manifest.yaml
+                          sed -i "s|__DB_PASS__|$DB_PASS|g" harness/manifest/ci_manifest.yaml
+                          sed -i "s|__TARGET_DB__|$TARGET_DB|g" harness/manifest/ci_manifest.yaml
+                          sed -i "s|__GIT_BRANCH__|$GIT_BRANCH|g" harness/manifest/ci_manifest.yaml
 
                           if [ "$OPERATION_TYPE" = "rollbackCount" ]; then
-                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount $ROLLBACK_COUNT|g" ci_manifest.yaml
+                            sed -i "s|__LIQUIBASE_COMMAND__|rollbackCount $ROLLBACK_COUNT|g" harness/manifest/ci_manifest.yaml
                           else
-                            sed -i "s|__LIQUIBASE_COMMAND__|update|g" ci_manifest.yaml
+                            sed -i "s|__LIQUIBASE_COMMAND__|update|g" harness/manifest/ci_manifest.yaml
                           fi
 
-                          NAME=$(grep 'name:' ci_manifest.yaml | head -1 | awk '{print $2}')
+                          NAME=$(grep 'name:' harness/manifest/ci_manifest.yaml | head -1 | awk '{print $2}')
                           echo "LIQUIBASE_JOB_NAME=$NAME"
               - step:
                   name: ApplyLiquibaseJob
@@ -127,7 +128,7 @@ pipeline:
                   timeout: 10m
                   spec:
                     filePaths:
-                      - ci_manifest.yaml
+                      - harness/manifest/ci_manifest.yaml
                     skipDryRun: false
                     skipSteadyStateCheck: false
               - step:
