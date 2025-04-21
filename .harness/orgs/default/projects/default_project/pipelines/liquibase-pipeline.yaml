@@ -3,8 +3,11 @@ pipeline:
   identifier: LiquibaseDeploymentPipeline
   orgIdentifier: default
   projectIdentifier: default_project
-  description: Runs Liquibase DB migrations across environments
-  tags: {}
+  repo:
+    connectorRef: github_connector
+    repositoryName: AdityaOnCloud14/eks-liquibase-demo
+    branch: main
+    repoRoot: "."
   variables:
     - name: OperationType
       type: String
@@ -123,10 +126,8 @@ pipeline:
                     stageStatus: All
                   spec:
                     deleteResources:
-                      type: ResourceName
-                      spec:
-                        resources:
-                          - Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>
+                      names:
+                        - Job/<+step.GenerateManifestDev.output.LIQUIBASE_JOB_NAME>
                     skipDryRun: false
                     skipSteadyStateCheck: false
                     timeout: 10m
@@ -231,10 +232,8 @@ pipeline:
                     stageStatus: All
                   spec:
                     deleteResources:
-                      type: ResourceName
-                      spec:
-                        resources:
-                          - Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>
+                      names:
+                        - Job/<+step.GenerateManifestTest.output.LIQUIBASE_JOB_NAME>
                     skipDryRun: false
                     skipSteadyStateCheck: false
                     timeout: 10m
@@ -339,10 +338,8 @@ pipeline:
                     stageStatus: All
                   spec:
                     deleteResources:
-                      type: ResourceName
-                      spec:
-                        resources:
-                          - Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>
+                      names:
+                        - Job/<+step.GenerateManifestProd.output.LIQUIBASE_JOB_NAME>
                     skipDryRun: false
                     skipSteadyStateCheck: false
                     timeout: 10m
