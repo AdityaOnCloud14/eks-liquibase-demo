@@ -58,14 +58,8 @@ pipeline:
           environment:
             environmentRef: dev
             deployToAll: false
-            infrastructure:
-              infrastructureDefinition:
-                type: KubernetesDirect
-                spec:
-                  connectorRef: eks_connector
-                  namespace: liquibase-demo
-                  releaseName: liquibase-job
-              allowSimultaneousDeployments: false
+            infrastructureDefinitions:
+              - identifier: eks_infra_dev
           execution:
             steps:
               - step:
@@ -177,14 +171,8 @@ pipeline:
           environment:
             environmentRef: test
             deployToAll: false
-            infrastructure:
-              infrastructureDefinition:
-                type: KubernetesDirect
-                spec:
-                  connectorRef: eks_connector
-                  namespace: liquibase-demo
-                  releaseName: liquibase-job
-              allowSimultaneousDeployments: false
+            infrastructureDefinitions:
+              - identifier: eks_infra_test
           execution:
             steps:
               - step:
@@ -298,14 +286,8 @@ pipeline:
           environment:
             environmentRef: prod
             deployToAll: false
-            infrastructure:
-              infrastructureDefinition:
-                type: KubernetesDirect
-                spec:
-                  connectorRef: eks_connector
-                  namespace: liquibase-demo
-                  releaseName: liquibase-job
-              allowSimultaneousDeployments: false
+            infrastructureDefinitions:
+              - identifier: eks_infra_prod
           execution:
             steps:
               - step:
