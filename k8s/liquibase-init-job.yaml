@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: liquibase-init-job
+  namespace: liquibase-demo
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+        - name: changelog-volume
+          configMap:
+            name: liquibase-changelog
+      containers:
+        - name: liquibase
+          image: liquibase/liquibase:4.27.0  # Pinned version
+          args:
+            - "--driver=org.postgresql.Driver"
+            - "--url=jdbc:postgresql://$(DB_HOST):5432/$(DB_NAME)"
+            - "--username=$(DB_USER)"
+            - "--password=$(DB_PASS)"
+            - "--changeLogFile=/changelog/db.changelog-master.xml"
+            - "update"
+            - "--logLevel=DEBUG"
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: liquibase-db-creds
+                  key: host
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: liquibase-db-creds
+                  key: name
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: liquibase-db-creds
+                  key: user
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: liquibase-db-creds
+                  key: pass
+          volumeMounts:
+            - name: changelog-volume
+              mountPath: /changelog  # Changed mount path
