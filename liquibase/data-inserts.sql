@@ -1,17 +1,17 @@
 --liquibase formatted sql
 
--- changeset dbteam:003-insert-customers
-INSERT INTO customers (first_name, last_name, email)
+-- changeset dbteam:004-insert-address
+INSERT INTO address (first_name, last_name, email)
 VALUES
 ('Alice', 'Smith', 'alice.smith@example.com'),
 ('Bob', 'Johnson', 'bob.johnson@example.com'),
 ('Charlie', 'Brown', 'charlie.brown@example.com'),
 ('Diana', 'Prince', 'diana.prince@example.com'),
 ('Ethan', 'Hunt', 'ethan.hunt@example.com');
--- rollback DELETE FROM customers WHERE email IN ('alice@example.com','bob@example.com');
+-- rollback DELETE FROM address WHERE email IN ('alice@example.com','bob@example.com');
 
--- changeset dbteam:004-insert-orders
-INSERT INTO orders (customer_id, order_date, status, total_amount)
+-- changeset dbteam:005-insert-details
+INSERT INTO details (customer_id, order_date, status, total_amount)
 VALUES
 (1, '2025-01-10', 'Processing', 120.50),
 (1, '2025-01-15', 'Shipped', 89.99),
@@ -23,10 +23,10 @@ VALUES
 (3, '2025-03-05', 'Shipped', 150.00),
 (2, '2025-03-10', 'Processing', 99.95),
 (5, '2025-03-12', 'Delivered', 499.99);
--- rollback DELETE FROM orders 
+-- rollback DELETE FROM details 
 
--- changeset dbteam:005-insert-info
-INSERT INTO info (customer_id, order_date, status, total_amount)
+-- changeset dbteam:006-insert-type
+INSERT INTO type (customer_id, order_date, status, total_amount)
 VALUES
 (1, '2025-01-10', 'Processing', 120.50),
 (1, '2025-01-15', 'Shipped', 89.99),
@@ -39,4 +39,4 @@ VALUES
 (2, '2025-03-10', 'Processing', 99.95),
 (5, '2025-03-12', 'Delivered', 499.99);
 
--- rollback DELETE FROM info 
+-- rollback DELETE FROM type
