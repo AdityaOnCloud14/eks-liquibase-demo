@@ -1,3 +1,11 @@
-FROM liquibase/liquibase
-ADD liquibase-k8s-app/src/main/resources/db/db.changelog-dev.sql /liquibase/changelog/
-CMD ["sh", "-c", "docker-entrypoint.sh --url=${DB_URL} --username=${DB_USERNAME} --password=${DB_PASSWORD} --classpath=/liquibase/changelog --changelog-file=db.changelog-${ENV}.sql update"]
+# Use official Liquibase image as base
+FROM liquibase/liquibase:latest
+
+# Create liquibase directory structure inside container
+RUN mkdir -p /liquibase/changelog
+
+# Copy your changelogs (SQL) into container
+ADD src/main/resources/db/ /liquibase/changelog/
+
+# Default CMD will be overridden by the Kubernetes Job command
+CMD ["sh", "-c", "echo 'Default Liquibase image ready. Use Kubernetes Jobs to run update or rollback.'"]

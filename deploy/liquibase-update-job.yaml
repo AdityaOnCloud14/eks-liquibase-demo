@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: liquibase-update-job
+  namespace: liquibase-test
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: liquibase-update
+          image: adityadhar/liquibase-liquibaseimage:v5
+          imagePullPolicy: Always
+          env:
+            - name: DB_HOST
+              value: my-postgres-instance.cet6m6m6sr02.us-east-1.rds.amazonaws.com
+            - name: DB_DATABASE
+              value: demo_db
+            - name: DB_USERNAME
+              value: demo_user
+            - name: DB_PASSWORD
+              value: demo_password
+            - name: ENV
+              value: dev
+          command:
+            - sh
+            - -c
+            - |
+              export DB_URL=jdbc:postgresql://${DB_HOST}:5432/${DB_DATABASE} && \
+              echo "Running Liquibase UPDATE on $DB_URL..." && \
+              docker-entrypoint.sh --url=${DB_URL} --username=${DB_USERNAME} --password=${DB_PASSWORD} --classpath=/liquibase/changelog --changelog-file=db.changelog-${ENV}.sql update

@@ -1,59 +1,74 @@
-# Liquibase Kubernetes Application
+# EKS Liquibase Demo
 
-This is a Spring Boot application that demonstrates the use of Liquibase for database migrations in a Kubernetes environment.
+This project demonstrates how to use Liquibase for database migrations in a Kubernetes environment.
 
 ## Project Structure
 
 ```
-liquibase-k8s-app/
-├── Dockerfile              # Main application Dockerfile
-├── Dockerfile.liquibase    # Liquibase migration Dockerfile
-├── liquibase-app-deployment.yaml  # Kubernetes deployment
-├── service.yaml            # Kubernetes service
+eks-liquibase-demo/
+├── deploy/
+│   ├── liquibase-update-job.yaml    # Job to apply migrations
+│   ├── liquibase-rollback-job.yaml  # Job to rollback migrations
+│   ├── update.bat                   # Windows script to trigger update
+│   ├── rollback.bat                 # Windows script to trigger rollback
 ├── src/
-│   └── main/
-│       └── java/
-│           └── com/
-│               └── liquibase/
-│                   ├── Application.java
-│                   └── controller/
-│                       └── HealthController.java
-│       └── resources/
-│           └── application.properties
-└── pom.xml
+│   └── main/resources/db/
+│       └── db.changelog-dev.sql     # Liquibase changelog
+├── Dockerfile.liquibase              # Liquibase Dockerfile
+├── build.bat                         # Build script
+└── README.md
 ```
 
 ## Prerequisites
 
-- Java 17
-- Maven
 - Docker
 - Kubernetes cluster
-- PostgreSQL database
+- kubectl configured to access your cluster
+- MySQL database (RDS or other)
 
-## Building and Running
+## Setup
 
-1. Build the application:
+1. Create the Kubernetes secret for database credentials:
 ```bash
-mvn clean package
+kubectl create secret generic db-credentials \
+  --from-literal=username='your-username' \
+  --from-literal=password='your-password' \
+  -n liquibase-test
 ```
 
-2. Build Docker images:
+2. Build the Liquibase migrator image:
 ```bash
-docker build -t adityadhar/liquibase-app:latest .
-docker build -f Dockerfile.liquibase -t adityadhar/liquibase-migrator:latest .
+build.bat
 ```
 
-3. Deploy to Kubernetes:
+## Usage
+
+### Applying Migrations
+
+To apply database migrations:
 ```bash
-kubectl apply -f liquibase-app-deployment.yaml
-kubectl apply -f service.yaml
+deploy\update.bat
 ```
 
-## Database Migrations
+### Rolling Back Migrations
 
-Database migrations are handled by Liquibase. The migrations are run as a separate job in Kubernetes before the main application starts.
+To rollback the last migration:
+```bash
+deploy\rollback.bat
+```
 
-## Health Check
+## Database Schema
 
-The application exposes a health check endpoint at `/health`. 
+The changelog (`db.changelog-dev.sql`) creates two tables:
+1. `employee` - Stores employee information
+2. `department` - Stores department information with a reference to the department manager
+
+## Troubleshooting
+
+If migrations fail:
+1. Check the job logs:
+```bash
+kubectl logs job/liquibase-update
+```
+2. Verify database connection details in the job YAML files
+3. Ensure the Kubernetes secret exists and contains correct credentials 
