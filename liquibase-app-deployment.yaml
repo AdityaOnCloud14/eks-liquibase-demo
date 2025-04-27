@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dev-liquibaseinitcontainer-ms
+  namespace: liquibase-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dev-liquibaseinitcontainer-ms
+  template:
+    metadata:
+      labels:
+        app: dev-liquibaseinitcontainer-ms
+    spec:
+      containers:
+        - name: app
+          image: adityadhar/liquibase-appimage:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_CONNECTION_IP
+              value: "my-postgres-instance.cet6m6m6sr02.us-east-1.rds.amazonaws.com"
+            - name: DB_DATABASE
+              value: "demo_db"
+            - name: DB_USERNAME
+              value: "demo_user"
+            - name: DB_PASSWORD
+              value: "demo_password"
+      initContainers:
+        - name: liquibase
+          image: adityadhar/liquibase-liquibaseimage:v2
+          imagePullPolicy: Always
+          env:
+            - name: DB_HOST
+              value: "my-postgres-instance.cet6m6m6sr02.us-east-1.rds.amazonaws.com"
+            - name: DB_DATABASE
+              value: demo_db
+            - name: DB_USERNAME
+              value: "demo_user"
+            - name: DB_PASSWORD
+              value: "demo_password"
+            - name: ENV
+              value: dev
+          command:
+            - sh
+            - -c
+            - |
+              export DB_URL=jdbc:postgresql://${DB_HOST}:5432/${DB_DATABASE} && \
+              echo "Running Liquibase migrations on $DB_URL..." && \
+              docker-entrypoint.sh --url=${DB_URL} --username=${DB_USERNAME} --password=${DB_PASSWORD} --classpath=/liquibase/changelog --changelog-file=db.changelog-${ENV}.sql update || (
+                echo "Migration failed, attempting rollback..." && \
+                docker-entrypoint.sh --url=${DB_URL} --username=${DB_USERNAME} --password=${DB_PASSWORD} --classpath=/liquibase/changelog --changelog-file=db.changelog-${ENV}.sql rollbackCount 1
+              )
+
