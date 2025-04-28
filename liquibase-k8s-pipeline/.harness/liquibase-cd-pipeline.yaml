@@ -1,0 +1,53 @@
+pipeline:
+  name: liquibase-main-pipeline
+  projectIdentifier: default_project
+  orgIdentifier: default
+  variables:
+    - name: DOCKER_IMAGE
+      type: String
+      value: <+input>  # User provides the Docker image at runtime
+  stages:
+    - parallel:
+        - stage:
+            name: Liquibase Update
+            identifier: Liquibase_Update
+            type: Deployment
+            spec:
+              service:
+                serviceRef: liquibase_service
+              environment:
+                environmentRef: dev
+                infrastructureDefinitions:
+                  - identifier: eksconnector
+              execution:
+                steps:
+                  - step:
+                      name: Deploy Liquibase Update
+                      identifier: Deploy_Update
+                      type: K8sApply
+                      timeout: 10m
+                      spec:
+                        filePaths:
+                          - deploy/liquibase-update-deployment.yaml
+
+        - stage:
+            name: Liquibase Rollback
+            identifier: Liquibase_Rollback
+            type: Deployment
+            spec:
+              service:
+                serviceRef: liquibase_service
+              environment:
+                environmentRef: dev
+                infrastructureDefinitions:
+                  - identifier: eksconnector
+              execution:
+                steps:
+                  - step:
+                      name: Deploy Liquibase Rollback
+                      identifier: Deploy_Rollback
+                      type: K8sApply
+                      timeout: 10m
+                      spec:
+                        filePaths:
+                          - deploy/liquibase-rollback-deployment.yaml

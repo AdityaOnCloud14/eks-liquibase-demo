@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: liquibase-update-deployment
+  namespace: liquibase-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: liquibase-update
+  template:
+    metadata:
+      labels:
+        app: liquibase-update
+    spec:
+      containers:
+        - name: dummy
+          image: gcr.io/google-containers/pause:3.9
+      initContainers:
+        - name: liquibase
+          image: <+input>
+          imagePullPolicy: Always
+          env:
+            - name: DB_HOST
+              value: "your-rds-endpoint"
+            - name: DB_DATABASE
+              value: "demo_db"
+            - name: DB_USERNAME
+              value: "demo_user"
+            - name: DB_PASSWORD
+              value: "demo_password"
+            - name: ENV
+              value: dev
+          command:
+            - sh
+            - -c
+            - |
+              export DB_URL=jdbc:postgresql://${DB_HOST}:5432/${DB_DATABASE} && \
+              echo "Running Liquibase UPDATE..." && \
+              docker-entrypoint.sh --url=${DB_URL} --username=${DB_USERNAME} --password=${DB_PASSWORD} --classpath=/liquibase/changelog --changelog-file=db.changelog-${ENV}.sql update

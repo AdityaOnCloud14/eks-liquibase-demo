@@ -1,0 +1,6 @@
+[sqlfluff]
+dialect = postgres
+max_line_length = 200
+
+[sqlfluff:rules:layout.long_lines]
+enabled = False

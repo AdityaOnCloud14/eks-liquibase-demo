@@ -1,0 +1,39 @@
+resources:
+  - name: liquibase-git
+    type: git
+    source:
+      uri: https://github.com/your-repo/liquibase-k8s-pipeline
+      branch: main
+
+  - name: liquibase-docker-image
+    type: docker-image
+    source:
+      repository: your-dockerhub-username/liquibase-liquibaseimage
+      tag: latest
+      username: adityadhar
+      password: DIGI123indi@
+
+jobs:
+  - name: build-and-push-liquibase-image
+    plan:
+      - get: liquibase-git
+        trigger: true
+      - task: sql-lint
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source: {repository: python, tag: "3.10"}
+          inputs:
+            - name: liquibase-git
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                pip install sqlfluff
+                cd liquibase-git
+                sqlfluff lint src/main/resources/db/*.sql
+      - put: liquibase-docker-image
+        params:
+          build: liquibase-git/docker
