@@ -1,0 +1,5 @@
+service:
+  name: liquibase_service_1
+  identifier: liquibase_service_1
+  orgIdentifier: default
+  projectIdentifier: default_project
