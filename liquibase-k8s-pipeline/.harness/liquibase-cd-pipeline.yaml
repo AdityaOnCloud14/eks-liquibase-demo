@@ -8,16 +8,10 @@ pipeline:
         name: dev
         identifier: dev
         type: Deployment
-        failureStrategies:
-          - onFailure:
-              errors:
-                - AllErrors
-              action:
-                type: Abort
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: liquibase_service
+            serviceRef: liquibase_service_1
           environment:
             environmentRef: dev
             infrastructureDefinitions:
@@ -37,8 +31,7 @@ pipeline:
                         script: |
                           pip install sqlfluff
                           sqlfluff lint src/main/resources/db/db.changelog-dev.sql --config .sqlfluff
-                        environmentVariables: []
-                      timeout: 2m
+                  timeout: 2m
               - step:
                   name: Create ConfigMap
                   identifier: CreateConfigMap_Dev
@@ -50,30 +43,28 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          kubectl create configmap liquibase-changelog-dev --from-file=src/main/resources/db/db.changelog-dev.sql -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
-                      timeout: 1m
+                          kubectl create configmap liquibase-changelog-dev \
+                            --from-file=src/main/resources/db/db.changelog-dev.sql \
+                            -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
+                  timeout: 1m
               - step:
                   name: Deploy Liquibase Update
                   identifier: DeployLiquibaseUpdate_Dev
                   type: K8sApply
                   timeout: 10m
-                  spec:
-                    filePaths:
-                      - deploy/liquibase-update-deployment.yaml
+                  spec: {}
+
     - stage:
         name: Rollback Dev
         identifier: Rollback_Dev
         type: Deployment
-        failureStrategies:
-          - onFailure:
-              errors:
-                - AllErrors
-              action:
-                type: Abort
+        when:
+          pipelineStatus: Success
+          condition: <+manual>
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: liquibase_service
+            serviceRef: liquibase_service_2
           environment:
             environmentRef: dev
             infrastructureDefinitions:
@@ -85,26 +76,16 @@ pipeline:
                   identifier: DeployLiquibaseRollback_Dev
                   type: K8sApply
                   timeout: 10m
-                  spec:
-                    filePaths:
-                      - deploy/liquibase-rollback-deployment.yaml
-        when:
-          pipelineStatus: Success
-          condition: <+manual>
+                  spec: {}
+
     - stage:
         name: uat
         identifier: uat
         type: Deployment
-        failureStrategies:
-          - onFailure:
-              errors:
-                - AllErrors
-              action:
-                type: Abort
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: liquibase_service
+            serviceRef: liquibase_service_1
           environment:
             environmentRef: uat
             infrastructureDefinitions:
@@ -124,8 +105,7 @@ pipeline:
                         script: |
                           pip install sqlfluff
                           sqlfluff lint src/main/resources/db/db.changelog-uat.sql --config .sqlfluff
-                        environmentVariables: []
-                      timeout: 2m
+                  timeout: 2m
               - step:
                   name: Create ConfigMap
                   identifier: CreateConfigMap_UAT
@@ -137,30 +117,28 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          kubectl create configmap liquibase-changelog-uat --from-file=src/main/resources/db/db.changelog-uat.sql -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
-                      timeout: 1m
+                          kubectl create configmap liquibase-changelog-uat \
+                            --from-file=src/main/resources/db/db.changelog-uat.sql \
+                            -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
+                  timeout: 1m
               - step:
                   name: Deploy Liquibase Update
                   identifier: DeployLiquibaseUpdate_UAT
                   type: K8sApply
                   timeout: 10m
-                  spec:
-                    filePaths:
-                      - deploy/liquibase-update-deployment.yaml
+                  spec: {}
+
     - stage:
         name: Rollback UAT
         identifier: Rollback_UAT
         type: Deployment
-        failureStrategies:
-          - onFailure:
-              errors:
-                - AllErrors
-              action:
-                type: Abort
+        when:
+          pipelineStatus: Success
+          condition: <+manual>
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: liquibase_service
+            serviceRef: liquibase_service_2
           environment:
             environmentRef: uat
             infrastructureDefinitions:
@@ -172,26 +150,16 @@ pipeline:
                   identifier: DeployLiquibaseRollback_UAT
                   type: K8sApply
                   timeout: 10m
-                  spec:
-                    filePaths:
-                      - deploy/liquibase-rollback-deployment.yaml
-        when:
-          pipelineStatus: Success
-          condition: <+manual>
+                  spec: {}
+
     - stage:
         name: prod
         identifier: prod
         type: Deployment
-        failureStrategies:
-          - onFailure:
-              errors:
-                - AllErrors
-              action:
-                type: Abort
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: liquibase_service
+            serviceRef: liquibase_service_1
           environment:
             environmentRef: prod
             infrastructureDefinitions:
@@ -211,8 +179,7 @@ pipeline:
                         script: |
                           pip install sqlfluff
                           sqlfluff lint src/main/resources/db/db.changelog-prod.sql --config .sqlfluff
-                        environmentVariables: []
-                      timeout: 2m
+                  timeout: 2m
               - step:
                   name: Create ConfigMap
                   identifier: CreateConfigMap_Prod
@@ -224,30 +191,28 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          kubectl create configmap liquibase-changelog-prod --from-file=src/main/resources/db/db.changelog-prod.sql -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
-                      timeout: 1m
+                          kubectl create configmap liquibase-changelog-prod \
+                            --from-file=src/main/resources/db/db.changelog-prod.sql \
+                            -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
+                  timeout: 1m
               - step:
                   name: Deploy Liquibase Update
                   identifier: DeployLiquibaseUpdate_Prod
                   type: K8sApply
                   timeout: 10m
-                  spec:
-                    filePaths:
-                      - deploy/liquibase-update-deployment.yaml
+                  spec: {}
+
     - stage:
         name: Rollback Prod
         identifier: Rollback_Prod
         type: Deployment
-        failureStrategies:
-          - onFailure:
-              errors:
-                - AllErrors
-              action:
-                type: Abort
+        when:
+          pipelineStatus: Success
+          condition: <+manual>
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: liquibase_service
+            serviceRef: liquibase_service_2
           environment:
             environmentRef: prod
             infrastructureDefinitions:
@@ -259,9 +224,4 @@ pipeline:
                   identifier: DeployLiquibaseRollback_Prod
                   type: K8sApply
                   timeout: 10m
-                  spec:
-                    filePaths:
-                      - deploy/liquibase-rollback-deployment.yaml
-        when:
-          pipelineStatus: Success
-          condition: <+manual>
+                  spec: {}
