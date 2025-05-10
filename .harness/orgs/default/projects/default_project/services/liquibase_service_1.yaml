@@ -17,7 +17,6 @@ service:
                   gitFetchType: Branch
                   paths:
                     - liquibase-k8s-pipeline/deploy/liquibase-update-deployment.yaml
-                    - liquibase-k8s-pipeline/deploy/liquibase-rollback-deployment.yaml
                   branch: feature/configmap-pipeline
               skipResourceVersioning: false
               enableDeclarativeRollback: false
