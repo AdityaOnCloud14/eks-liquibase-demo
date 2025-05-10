@@ -1,9 +1,0 @@
-FROM liquibase/liquibase
-
-# Copy changelog files into the container
-ADD src/main/resources/db/ /liquibase/changelog
-
-USER root
-
-# Final command is only placeholder; real command comes from Kubernetes InitContainer command
-CMD ["liquibase", "--help"]

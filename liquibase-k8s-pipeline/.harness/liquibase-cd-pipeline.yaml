@@ -5,8 +5,8 @@ pipeline:
   orgIdentifier: default
   stages:
     - stage:
-        name: Dev
-        identifier: Dev
+        name: dev
+        identifier: dev
         type: Deployment
         failureStrategies:
           - onFailure:
@@ -92,8 +92,8 @@ pipeline:
           pipelineStatus: Success
           condition: <+manual>
     - stage:
-        name: UAT
-        identifier: UAT
+        name: uat
+        identifier: uat
         type: Deployment
         failureStrategies:
           - onFailure:
@@ -179,8 +179,8 @@ pipeline:
           pipelineStatus: Success
           condition: <+manual>
     - stage:
-        name: Prod
-        identifier: Prod
+        name: prod
+        identifier: prod
         type: Deployment
         failureStrategies:
           - onFailure:
