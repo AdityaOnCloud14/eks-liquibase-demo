@@ -7,7 +7,7 @@ service:
     spec:
       manifests:
         - manifest:
-            identifier: LiquibaseManifest
+            identifier: Liquibase_update
             type: K8sManifest
             spec:
               store:
