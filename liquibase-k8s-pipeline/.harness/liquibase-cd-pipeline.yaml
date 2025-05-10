@@ -25,6 +25,21 @@ pipeline:
           execution:
             steps:
               - step:
+                  name: Clone Repo
+                  identifier: CloneRepo_Dev
+                  type: GitClone
+                  spec:
+                    connectorRef: github_connector
+                    repoName: eks-liquibase-demo
+                    branch: feature/configmap-pipeline
+                    depth: 1
+                    cloneDirectory: /harness/working-dir
+                    build:
+                      type: branch
+                      spec:
+                        branch: feature/configmap-pipeline
+                  timeout: 1m
+              - step:
                   name: Create ConfigMap
                   identifier: CreateConfigMap_Dev
                   type: ShellScript
