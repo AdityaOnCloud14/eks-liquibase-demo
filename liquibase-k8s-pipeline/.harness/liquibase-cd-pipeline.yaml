@@ -25,6 +25,18 @@ pipeline:
           execution:
             steps:
               - step:
+                  name: Clone Repo
+                  identifier: CloneRepo_Dev
+                  type: GitClone
+                  spec:
+                    connectorRef: github_connector
+                    repoName: liquibase-k8s-pipeline
+                    build:
+                      type: branch
+                      spec:
+                        branch: feature/configmap-pipeline
+                  timeout: 2m
+              - step:
                   name: Create ConfigMap
                   identifier: CreateConfigMap_Dev
                   type: ShellScript
@@ -35,7 +47,7 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          kubectl create configmap liquibase-changelog-dev --from-file=src/main/resources/db/db.changelog-dev.sql -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
+                          kubectl create configmap liquibase-changelog-dev --from-file=liquibase-k8s-pipeline/src/main/resources/db/db.changelog-dev.sql -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
                   timeout: 1m
               - step:
                   name: Deploy Liquibase Update
@@ -49,15 +61,15 @@ pipeline:
         name: Rollback Dev
         identifier: Rollback_Dev
         type: Deployment
+        when:
+          pipelineStatus: Success
+          condition: <+manual>
         failureStrategies:
           - onFailure:
               errors:
                 - AllErrors
               action:
                 type: Abort
-        when:
-          pipelineStatus: Success
-          condition: <+manual>
         spec:
           deploymentType: Kubernetes
           service:
@@ -97,6 +109,18 @@ pipeline:
           execution:
             steps:
               - step:
+                  name: Clone Repo
+                  identifier: CloneRepo_UAT
+                  type: GitClone
+                  spec:
+                    connectorRef: github_connector
+                    repoName: liquibase-k8s-pipeline
+                    build:
+                      type: branch
+                      spec:
+                        branch: feature/configmap-pipeline
+                  timeout: 2m
+              - step:
                   name: Create ConfigMap
                   identifier: CreateConfigMap_UAT
                   type: ShellScript
@@ -107,7 +131,7 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          kubectl create configmap liquibase-changelog-uat --from-file=src/main/resources/db/db.changelog-uat.sql -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
+                          kubectl create configmap liquibase-changelog-uat --from-file=liquibase-k8s-pipeline/src/main/resources/db/db.changelog-uat.sql -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
                   timeout: 1m
               - step:
                   name: Deploy Liquibase Update
@@ -121,15 +145,15 @@ pipeline:
         name: Rollback UAT
         identifier: Rollback_UAT
         type: Deployment
+        when:
+          pipelineStatus: Success
+          condition: <+manual>
         failureStrategies:
           - onFailure:
               errors:
                 - AllErrors
               action:
                 type: Abort
-        when:
-          pipelineStatus: Success
-          condition: <+manual>
         spec:
           deploymentType: Kubernetes
           service:
@@ -169,6 +193,18 @@ pipeline:
           execution:
             steps:
               - step:
+                  name: Clone Repo
+                  identifier: CloneRepo_Prod
+                  type: GitClone
+                  spec:
+                    connectorRef: github_connector
+                    repoName: liquibase-k8s-pipeline
+                    build:
+                      type: branch
+                      spec:
+                        branch: feature/configmap-pipeline
+                  timeout: 2m
+              - step:
                   name: Create ConfigMap
                   identifier: CreateConfigMap_Prod
                   type: ShellScript
@@ -179,7 +215,7 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          kubectl create configmap liquibase-changelog-prod --from-file=src/main/resources/db/db.changelog-prod.sql -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
+                          kubectl create configmap liquibase-changelog-prod --from-file=liquibase-k8s-pipeline/src/main/resources/db/db.changelog-prod.sql -n liquibase-test --dry-run=client -o yaml | kubectl apply -f -
                   timeout: 1m
               - step:
                   name: Deploy Liquibase Update
@@ -193,15 +229,15 @@ pipeline:
         name: Rollback Prod
         identifier: Rollback_Prod
         type: Deployment
+        when:
+          pipelineStatus: Success
+          condition: <+manual>
         failureStrategies:
           - onFailure:
               errors:
                 - AllErrors
               action:
                 type: Abort
-        when:
-          pipelineStatus: Success
-          condition: <+manual>
         spec:
           deploymentType: Kubernetes
           service:
