@@ -1,0 +1,6 @@
+environment:
+  name: prod
+  identifier: prod
+  orgIdentifier: default
+  projectIdentifier: default_project
+  type: Production
