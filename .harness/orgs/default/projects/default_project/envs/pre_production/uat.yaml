@@ -1,0 +1,6 @@
+environment:
+  name: uat
+  identifier: uat
+  orgIdentifier: default
+  projectIdentifier: default_project
+  type: PreProduction
