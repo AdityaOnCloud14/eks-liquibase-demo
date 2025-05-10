@@ -3,3 +3,22 @@ service:
   identifier: liquibase_service_1
   orgIdentifier: default
   projectIdentifier: default_project
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: LiquibaseManifest
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: github_connector
+                  gitFetchType: Branch
+                  paths:
+                    - liquibase-k8s-pipeline/deploy/liquibase-update-deployment.yaml
+                    - liquibase-k8s-pipeline/deploy/liquibase-rollback-deployment.yaml
+                  branch: feature/configmap-pipeline
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+    type: Kubernetes
